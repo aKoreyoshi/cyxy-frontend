@@ -18,7 +18,10 @@
       <!-- 表单区域 -->
       <div class="login-form">
         <div class="form-item">
-          <div class="input-wrapper" :class="{ focused: nameInputFocus, filled: form.username }">
+          <div
+            class="input-wrapper"
+            :class="{ focused: nameInputFocus, filled: form.username }"
+          >
             <User class="input-icon" />
             <input
               v-model="form.username"
@@ -32,7 +35,10 @@
         </div>
 
         <div class="form-item">
-          <div class="input-wrapper" :class="{ focused: passwordInputFocus, filled: form.password }">
+          <div
+            class="input-wrapper"
+            :class="{ focused: passwordInputFocus, filled: form.password }"
+          >
             <Lock class="input-icon" />
             <input
               v-model="form.password"
@@ -50,7 +56,11 @@
           <a href="javascript:;" class="forgot-link">忘记密码？</a>
         </div>
 
-        <button class="login-btn" :class="{ loading: isNavigating }" @click="handleLogin">
+        <button
+          class="login-btn"
+          :class="{ loading: isNavigating }"
+          @click="handleLogin"
+        >
           <span v-if="!isNavigating">登 录</span>
           <span v-else class="loading-text">
             <i class="loading-spinner"></i>
@@ -66,7 +76,7 @@
         </div>
         <p class="tip">
           <el-icon class="tip-icon"><InfoFilled /></el-icon>
-          点击登录即可，示例版本无需校验
+          演示账号：admin / 123456
         </p>
       </div>
     </div>
@@ -81,11 +91,14 @@ import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user.js";
 import { storeToRefs } from "pinia";
-import { arr2tree } from "@/utils/index.js";
+import { arr2tree, setLocalStorage } from "@/utils/index.js";
 import menuJson from "@/router/menu.json";
 import { menuKey } from "@/router/menuConfig.js";
 import { useLayoutStore } from "@/stores/layout.js";
 import { User, Lock, InfoFilled } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import cookies from "js-cookie";
+import { login } from "@/api/user";
 
 const layoutStore = useLayoutStore();
 const { isNavigating } = storeToRefs(layoutStore);
@@ -98,16 +111,54 @@ const form = reactive({
   password: "",
 });
 
-const handleLogin = () => {
+const handleLogin = async () => {
+  // 前端先做一次空值校验，减少无意义的请求
+  if (!form.username.trim()) {
+    ElMessage.warning("请输入用户名");
+    return;
+  }
+  if (!form.password) {
+    ElMessage.warning("请输入密码");
+    return;
+  }
+
   const userStore = useUserStore();
-  userStore.$patch((state) => {
-    state.menu = arr2tree(menuJson, {
+  layoutStore.$patch((state) => {
+    state.isNavigating = true;
+  });
+
+  try {
+    // 账号密码交给后端校验，目前后端写死 admin / 123456
+    const res = await login({
+      username: form.username.trim(),
+      password: form.password,
+    });
+
+    // token 存 cookie，退出登录时 removeAllLoginInfo 会一并清除
+    cookies.set("Authorization", res.token);
+
+    const menu = arr2tree(menuJson, {
       id: menuKey.id,
       parentId: menuKey.parentId,
       children: menuKey.children,
     });
-  });
-  router.replace({ path: "/" });
+
+    userStore.$patch((state) => {
+      state.userInfo = res.userInfo;
+      state.menu = menu;
+    });
+    // 同步写入 localStorage，确保路由守卫跳转时已能读到登录信息
+    setLocalStorage("user", { userInfo: res.userInfo, menu });
+
+    ElMessage.success("登录成功");
+    router.replace({ path: "/" });
+  } catch (e) {
+    // 失败提示已由 request 响应拦截器统一弹出，这里无需重复处理
+  } finally {
+    layoutStore.$patch((state) => {
+      state.isNavigating = false;
+    });
+  }
 };
 </script>
 
@@ -331,7 +382,12 @@ const handleLogin = () => {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
     transition: left 0.5s ease;
   }
 

@@ -159,5 +159,20 @@
     "url": "/page/alias/operate",
     "title": "添加页面",
     "menuType": 1
+  },
+  {
+    "id": "5",
+    "parentId": "0",
+    "url": "",
+    "title": "工具",
+    "icon": "icon-kaifazujian",
+    "menuType": 0
+  },
+  {
+    "id": "5-1",
+    "parentId": "5",
+    "url": "/tools/profit-calculator",
+    "title": "利润计算器",
+    "menuType": 0
   }
 ]

@@ -19,6 +19,9 @@ const PageMultiLevelChild = () => import("@/views/page/multi-level/child.vue");
 const PageAlias = () => import("@/views/page/alias/index.vue");
 const PageAliasOperate = () => import("@/views/page/alias/operate.vue");
 
+// 工具
+const ToolsProfitCalculator = () => import("@/views/tools/profit-calculator/index.vue");
+
 const route = [
   // 菜单示例
   { path: "/menu/nested", name: "MenusNested", component: MenusNested },
@@ -33,6 +36,7 @@ const route = [
   { path: "/component/tree", name: "ComponentTree", component: ComponentTree },
   { path: "/component/echarts", name: "ComponentEchart", component: ComponentEchart },
   { path: "/component/digital-input", name: "ComponentDigitalInput", component: ComponentDigitalInput },
+  { path: "/tools/profit-calculator", name: "ToolsProfitCalculator", component: ToolsProfitCalculator },
 
   // 配置示例：业务区域全屏
   // {

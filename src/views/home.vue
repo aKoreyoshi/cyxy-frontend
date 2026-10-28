@@ -4,19 +4,17 @@
     <div class="welcome-section">
       <div class="welcome-icon">👋</div>
       <h1 class="welcome-title">欢迎使用 V3S Admin</h1>
-      <p class="welcome-desc">一个开箱即用的 Vue3 中后台管理模板，助你快速搭建企业级应用</p>
+      <p class="welcome-desc">
+        一个开箱即用的 Vue3 中后台管理模板，助你快速搭建企业级应用
+      </p>
 
       <!-- 快捷键提示 -->
       <div class="shortcut-tip" @click="openSearch">
         <el-icon class="shortcut-icon"><Search /></el-icon>
         <span class="shortcut-label">快捷搜索</span>
         <div class="shortcut-keys">
-          <template v-if="isMac">
-            <kbd>⌘</kbd> + <kbd>K</kbd>
-          </template>
-          <template v-else>
-            <kbd>Ctrl</kbd> + <kbd>Space</kbd>
-          </template>
+          <template v-if="isMac"> <kbd>⌘</kbd> + <kbd>K</kbd> </template>
+          <template v-else> <kbd>Ctrl</kbd> + <kbd>Space</kbd> </template>
         </div>
       </div>
 
@@ -48,13 +46,22 @@
         <div class="feature-desc">{{ feature.desc }}</div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
 import { Link, Document, Search } from "@element-plus/icons-vue";
 import { useLayoutStore } from "@/stores/layout.js";
+import { onMounted, ref } from "vue";
+import { getUser } from "@/api/user";
+
+const msg = ref("");
+onMounted(async () => {
+  await getUser();
+  msg.value = await getUser(); // 拿到的是 data，即 "请求成功。"
+  console.log(msg.value);
+  // alert(msg.value);
+});
 
 const layoutStore = useLayoutStore();
 const isMac = /mac/i.test(navigator.userAgent);
@@ -74,16 +81,26 @@ const techList = [
 ];
 
 const features = [
-  { icon: "🎯", title: "多种布局", desc: "侧边菜单 / 顶部菜单 / 混合布局，一键切换" },
+  {
+    icon: "🎯",
+    title: "多种布局",
+    desc: "侧边菜单 / 顶部菜单 / 混合布局，一键切换",
+  },
   { icon: "🌓", title: "暗黑模式", desc: "内置暗黑主题，跟随系统或手动切换" },
   { icon: "🎨", title: "主题定制", desc: "支持自定义主题色，一键换肤" },
-  { icon: "📦", title: "丰富组件", desc: "表格 / 搜索 / 图表 / 树等常用组件封装" },
+  {
+    icon: "📦",
+    title: "丰富组件",
+    desc: "表格 / 搜索 / 图表 / 树等常用组件封装",
+  },
   { icon: "🔐", title: "权限管理", desc: "路由级别权限控制，菜单动态渲染" },
   { icon: "⌨️", title: "快捷搜索", desc: "支持拼音 / 首字母快速搜索菜单" },
 ];
 
-const openGithub = () => window.open("https://github.com/wangyupo/v3s", "_blank");
-const openDocs = () => window.open("https://github.com/wangyupo/v3s#readme", "_blank");
+const openGithub = () =>
+  window.open("https://github.com/wangyupo/v3s", "_blank");
+const openDocs = () =>
+  window.open("https://github.com/wangyupo/v3s#readme", "_blank");
 </script>
 
 <style lang="scss" scoped>
@@ -275,9 +292,15 @@ const openDocs = () => window.open("https://github.com/wangyupo/v3s#readme", "_b
 }
 
 @keyframes wave {
-  0% { transform: rotate(0deg); }
-  50% { transform: rotate(3deg); }
-  100% { transform: rotate(0deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 // 响应式

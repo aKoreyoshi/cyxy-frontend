@@ -1,6 +1,7 @@
 import axios from "axios";
 import { ElMessage } from "element-plus";
 import { debounce } from "lodash-es";
+import cookies from "js-cookie";
 import { removeAllLoginInfo } from "@/utils/index";
 import router from "@/router";
 
@@ -23,7 +24,9 @@ const request = axios.create({
 // 添加请求拦截器
 request.interceptors.request.use(
   function (config) {
-    // 在发送请求之前做些什么
+    // 统一携带登录 token，后端做鉴权时可直接读该请求头
+    const token = cookies.get("Authorization");
+    if (token) config.headers.Authorization = token;
     return config;
   },
   function (error) {
@@ -37,11 +40,24 @@ request.interceptors.response.use(
   function (response) {
     // 2xx 范围内的状态码都会触发该函数。
     // 对响应数据做点什么
-    return response.data;
+    const res = response.data;            // 后端统一返回的 Result
+
+    if (res.code === 200) {
+      return res.data;                    // 页面直接拿到业务数据
+    }
+
+    if (res.code === 401) {               // 未登录 → 清信息 + 跳登录
+      loginOut();
+      return Promise.reject(res.msg);
+    }
+
+    debounceErr(res.msg || "请求失败");     // 其他业务错误 → 弹提示
+    return Promise.reject(res.msg);
   },
-  function (error) {
+  function (error) {                       // HTTP 层面的错（500/404/超时）
     // 超出 2xx 范围的状态码都会触发该函数。
     // 对响应错误做点什么
+    debounceErr("网络异常：" + error.message);
     return Promise.reject(error);
   }
 );
