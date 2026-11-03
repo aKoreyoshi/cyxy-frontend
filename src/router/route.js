@@ -21,6 +21,16 @@ const PageAliasOperate = () => import("@/views/page/alias/operate.vue");
 
 // 工具
 const ToolsProfitCalculator = () => import("@/views/tools/profit-calculator/index.vue");
+// 产品管理
+const ProductList = () => import("@/views/product/list/index.vue");
+const ProductForm = () => import("@/views/product/form/index.vue");
+const ProductDetail = () => import("@/views/product/detail/index.vue");
+// 参数列表：5 张二维字典表共用一个页面组件，按 path 末段区分字典类型
+// fba-rate（尺寸收费标准）是专属页：两个分段各一张表 + 多级表头
+const ParamsTable = () => import("@/views/params/table/index.vue");
+const ParamsFbaRate = () => import("@/views/params/fba-rate/index.vue");
+const ParamsCommission = () => import("@/views/params/commission/index.vue");
+const ParamsExchange = () => import("@/views/params/exchange/index.vue");
 
 const route = [
   // 菜单示例
@@ -37,6 +47,32 @@ const route = [
   { path: "/component/echarts", name: "ComponentEchart", component: ComponentEchart },
   { path: "/component/digital-input", name: "ComponentDigitalInput", component: ComponentDigitalInput },
   { path: "/tools/profit-calculator", name: "ToolsProfitCalculator", component: ToolsProfitCalculator },
+
+  // 产品管理
+  { path: "/product/list", name: "ProductList", component: ProductList },
+  { path: "/product/create", name: "ProductForm", component: ProductForm },
+  // 详情页不在菜单里显示，但高亮父级「产品列表」
+  {
+    path: "/product/detail",
+    name: "ProductDetail",
+    component: ProductDetail,
+    meta: { targetMenuPath: "/product/list" },
+  },
+
+  // 参数列表：5 张普通二维字典表 → 同一个组件（type 取 path 末段）
+  // 注意：多个路由复用同一组件时 Vue Router 不会重新 mount，
+  // 所以 table/index.vue 里用 watch(route.path) 触发加载，不能只靠 onMounted
+  // 参数列表：5 张普通二维字典表 → 同一个组件（type 取 path 末段）
+  // 注意：多个路由复用同一组件时 Vue Router 不会重新 mount，
+  // 所以 table/index.vue 里用 watch(route.path) 触发加载，不能只靠 onMounted
+  { path: "/params/return-threshold", name: "ParamsReturnThreshold", component: ParamsTable },
+  { path: "/params/size-tier", name: "ParamsSizeTier", component: ParamsTable },
+  { path: "/params/fba-rate", name: "ParamsFbaRate", component: ParamsFbaRate },
+  { path: "/params/first-leg", name: "ParamsFirstLeg", component: ParamsTable },
+  { path: "/params/step-rate", name: "ParamsStepRate", component: ParamsTable },
+  { path: "/params/sys-config", name: "ParamsSysConfig", component: ParamsTable },
+  { path: "/params/commission", name: "ParamsCommission", component: ParamsCommission },
+  { path: "/params/exchange-rate", name: "ParamsExchange", component: ParamsExchange },
 
   // 配置示例：业务区域全屏
   // {

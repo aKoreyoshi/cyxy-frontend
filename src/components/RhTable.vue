@@ -39,7 +39,7 @@
           :key="`col_${index}`"
           fixed="left"
           type="index"
-          width="60"
+          :width="column.width || 60"
           align="center"
           v-if="column.type === 'index'"
         >

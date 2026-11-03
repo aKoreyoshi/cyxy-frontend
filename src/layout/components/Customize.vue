@@ -1,12 +1,27 @@
 <template>
   <!-- 个性化配置 -->
-  <el-tooltip effect="dark" content="个性化" placement="bottom" :show-after="250">
-    <div class="flex items-center px-3 h-full cursor-pointer" :class="headerToolHoverClasses" @click="openDrawer">
+  <el-tooltip
+    effect="dark"
+    content="个性化"
+    placement="bottom"
+    :show-after="250"
+  >
+    <div
+      class="flex items-center px-3 h-full cursor-pointer"
+      :class="headerToolHoverClasses"
+      @click="openDrawer"
+    >
       <el-icon size="20"><Setting /></el-icon>
     </div>
   </el-tooltip>
 
-  <el-drawer v-model="drawerVisible" title="个性化配置" direction="rtl" append-to-body :size="400">
+  <el-drawer
+    v-model="drawerVisible"
+    title="个性化配置"
+    direction="rtl"
+    append-to-body
+    :size="400"
+  >
     <div class="overflow-y-auto h-[calc(100%-65px)]">
       <!-- 主题模式 -->
       <el-radio-group v-model="isDark">
@@ -29,8 +44,15 @@
         <RhTitle title="导航模式" />
         <div class="flex">
           <el-radio-group v-model="layoutType">
-            <el-radio v-for="item in LAYOUTS" :key="item.layout" :label="item.layout" class="layout-item">
-              <div class="flex flex-col justify-center items-center ml-[30px] mb-3 first:ml-0">
+            <el-radio
+              v-for="item in LAYOUTS"
+              :key="item.layout"
+              :label="item.layout"
+              class="layout-item"
+            >
+              <div
+                class="flex flex-col justify-center items-center ml-[30px] mb-3 first:ml-0"
+              >
                 <i class="iconfont text-4xl" :class="item.icon" />
                 <span class="mt-2">{{ item.name }}</span>
               </div>
@@ -50,13 +72,22 @@
         <RhTitle title="界面显示" />
         <div class="flex items-center justify-between w-full">
           <span>灰色模式</span>
-          <el-switch v-model="isGray" inline-prompt active-text="开" inactive-text="关" />
+          <el-switch
+            v-model="isGray"
+            inline-prompt
+            active-text="开"
+            inactive-text="关"
+          />
         </div>
       </div>
     </div>
 
-    <div class="absolute bottom-0 left-0 right-0 flex justify-end p-4 border-t border-t-[var(--el-border-color-light)]">
-      <el-button type="danger" @click="handleClearStorage">清空缓存并返回登录页</el-button>
+    <div
+      class="absolute bottom-0 left-0 right-0 flex justify-end p-4 border-t border-t-[var(--el-border-color-light)]"
+    >
+      <el-button type="danger" @click="handleClearStorage"
+        >清空缓存并返回登录页</el-button
+      >
     </div>
   </el-drawer>
 </template>
@@ -86,11 +117,15 @@ const openDrawer = () => {
 
 // 清空缓存并刷新页面
 const handleClearStorage = () => {
-  ElMessageBox.confirm("该操作将清空所有缓存，清空后需要重新登录，确认清空缓存?", "清空缓存", {
-    confirmButtonText: "确认",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(() => {
+  ElMessageBox.confirm(
+    "该操作将清空所有缓存，清空后需要重新登录，确认清空缓存?",
+    "清空缓存",
+    {
+      confirmButtonText: "确认",
+      cancelButtonText: "取消",
+      type: "warning",
+    }
+  ).then(() => {
     ElMessage.success("缓存清空成功！");
     clearStorageAndCookies();
     window.location.reload();
