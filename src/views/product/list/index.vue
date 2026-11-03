@@ -163,6 +163,9 @@
           <el-button link type="primary" @click="handleEdit(scope.row)"
             >修改</el-button
           >
+          <el-button link type="primary" @click="handleProfit(scope.row)"
+            >测算</el-button
+          >
           <el-button link type="danger" @click="handleDelete(scope.row)"
             >删除</el-button
           >
@@ -462,7 +465,7 @@ function syncColumns() {
   cols.push({
     label: "操作",
     prop: "operate",
-    width: colWidth("operate", 170),
+    width: colWidth("operate", 215),
     fixed: "right",
     align: "center",
   });
@@ -562,6 +565,14 @@ const handleDetail = (row) => {
 // 修改（跳同一个详情页，但直接进编辑态）
 const handleEdit = (row) => {
   toPage("ProductDetail", { id: row.id, edit: true });
+};
+
+// 测算利润：带产品跳计算器页，自动选中该产品并带出已有信息
+const handleProfit = (row) => {
+  toPage("ToolsProfitCalculator", {
+    productId: row.id,
+    productName: `${row.product_no} ${row.name_cn}`,
+  });
 };
 
 // 清空筛选

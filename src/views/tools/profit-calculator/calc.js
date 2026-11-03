@@ -141,8 +141,20 @@ export function calculate(form) {
   const weightKg = Number(form.weightKg) || 0;
   const weightLb = weightKg * UNIT_FACTORS.kgToLb;
 
-  /* 3. 头程运费（L22）：取实重与抛重大者 × 单价 */
-  const firstLegCostCny = Math.max(weightKg, volWeightKg) * (Number(form.firstLegPrice) || 0);
+  /* 3. 头程运费：按配送方式分叉（与录入产品的口径一致）
+     AMAZON_SEND：亚马逊整票核算，单件 = 配送总费用($) × 汇率 ÷ 商品总数；件数缺失按 0 处理
+     SELF_CARRIER（含空值，历史口径）：取实重与抛重大者 × 单价 */
+  let firstLegCostCny;
+  if (form.shippingMethod === "AMAZON_SEND") {
+    const totalUnits = Number(form.totalUnits) || 0;
+    firstLegCostCny =
+      totalUnits > 0
+        ? ((Number(form.shippingTotalFeeUsd) || 0) * rate) / totalUnits
+        : 0;
+  } else {
+    firstLegCostCny =
+      Math.max(weightKg, volWeightKg) * (Number(form.firstLegPrice) || 0);
+  }
 
   /* 4. 尺寸分段 + 计费重（体积重 lb 参与取大） */
   const sizeTier = resolveSizeTier(sizeInch, weightLb);
@@ -173,17 +185,28 @@ export function calculate(form) {
   const miscRate = pct(form.miscRate);
   const purchaseCost = Number(form.purchaseCost) || 0;
   const storageFeeUsd = Number(form.storageFeeUsd) || 0;
+  // 两笔新增费用（入库配置费 / 月度仓储费）：与佣金、配送费、合仓费同口径进括号 × 汇率
+  // 空值按 0 处理，填 0 时与原公式完全一致（回归基准不受影响）
+  const inboundConfigFeeUsd = Number(form.inboundConfigFeeUsd) || 0;
+  const monthlyStorageUsd = Number(form.monthlyStorageUsd) || 0;
 
   // 到手收入 / 总成本：用「佣金金额」替代原来的「佣金费率 × 售价」，单一费率时结果完全一致
   const revenueCny = price * rate;
   const totalCostCny =
-    ((adRate + vatRate + miscRate) * price + commission.amount + fba.fee + storageFeeUsd) * rate +
+    ((adRate + vatRate + miscRate) * price +
+      commission.amount +
+      fba.fee +
+      storageFeeUsd +
+      inboundConfigFeeUsd +
+      monthlyStorageUsd) * rate +
     purchaseCost +
     returnCostCny +
     firstLegCostCny;
 
   const advanceCostCny = purchaseCost + firstLegCostCny + commission.amount * rate;
-  const fbaTotalCny = (fba.fee + storageFeeUsd + returnFeeUsd) * rate + returnCostCny;
+  const fbaTotalCny =
+    (fba.fee + storageFeeUsd + returnFeeUsd + inboundConfigFeeUsd + monthlyStorageUsd) * rate +
+    returnCostCny;
   const profitCny = revenueCny - totalCostCny;
   const marginRate = revenueCny ? profitCny / revenueCny : 0;
 
@@ -214,6 +237,8 @@ export function calculate(form) {
     returnCostCny,
     purchaseCost,
     storageFeeUsd,
+    inboundConfigFeeUsd,
+    monthlyStorageUsd,
     returnFeeUsd,
     adRate,
     vatRate,
@@ -244,6 +269,10 @@ export function createDefaultForm() {
     miscRate: 1,
     weightKg: 0.22,
     volumeDivisor: CALC_CONST.volumeDivisor,
+    shippingMethod: "SELF_CARRIER",
+    firstLegMethodCode: "",
+    shippingTotalFeeUsd: 0,
+    totalUnits: 0,
     logisticsProvider: "",
     firstLegPrice: 46,
     commissionCategory: "宠物用品",
@@ -251,6 +280,8 @@ export function createDefaultForm() {
     returnRate: 4.13,
     returnFeeUsd: 3.39,
     storageFeeUsd: 0,
+    inboundConfigFeeUsd: 0,
+    monthlyStorageUsd: 0,
     salePriceUsd: 18.99,
     exchangeRate: DEFAULT_EXCHANGE_RATE,
     targetMargin: 15,

@@ -3,10 +3,8 @@
     <!-- 欢迎区 -->
     <div class="welcome-section">
       <div class="welcome-icon">👋</div>
-      <h1 class="welcome-title">欢迎使用 V3S Admin</h1>
-      <p class="welcome-desc">
-        一个开箱即用的 Vue3 中后台管理模板，助你快速搭建企业级应用
-      </p>
+      <h1 class="welcome-title">欢迎进入, 宸曜星屿</h1>
+      <p class="welcome-desc">一个简易的后台管理系统，目前正在快速迭代ing</p>
 
       <!-- 快捷键提示 -->
       <div class="shortcut-tip" @click="openSearch">

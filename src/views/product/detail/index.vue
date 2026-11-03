@@ -14,6 +14,9 @@
               <el-button size="small" icon="Edit" @click="handleEdit"
                 >编辑</el-button
               >
+              <el-button size="small" icon="TrendCharts" @click="handleProfit"
+                >测算利润</el-button
+              >
               <el-button size="small" icon="Back" @click="handleBack"
                 >返回列表</el-button
               >
@@ -381,6 +384,14 @@ const handleSave = () => {
 
 const handleBack = () => {
   toPage("ProductList");
+};
+
+// 测算利润：带当前产品跳计算器页，自动选中并带出已有信息
+const handleProfit = () => {
+  toPage("ToolsProfitCalculator", {
+    productId: detail.id,
+    productName: `${detail.product_no} ${detail.name_cn}`,
+  });
 };
 
 /* ------------------------------------------------------------------ */

@@ -1,5 +1,41 @@
 <template>
-  <div class="profit-calculator">
+  <div class="profit-calculator" v-loading="prefillLoading">
+    <!-- 顶部：关联产品（可选）——选中后自动带出产品已有信息，不选则纯手动测算 -->
+    <el-row :gutter="16">
+      <el-col :span="24">
+        <el-card shadow="never" class="block-card">
+          <div class="product-bar">
+            <span class="product-bar__label">关联产品</span>
+            <el-select
+              v-model="selectedProductId"
+              filterable
+              remote
+              clearable
+              placeholder="输入产品编号 / 中文名搜索，选中后自动带出；不选则手动填写"
+              :remote-method="searchProducts"
+              :loading="optionsLoading"
+              class="product-bar__select"
+              @change="handleProductChange"
+            >
+              <el-option
+                v-for="i in productOptions"
+                :key="i.value"
+                :label="i.label"
+                :value="i.value"
+              />
+            </el-select>
+            <span class="product-bar__mode">
+              {{
+                selectedProductId
+                  ? "已关联产品：保存时同步更新该产品的 FBA 费用"
+                  : "手动测算：保存只记方案，不关联任何产品"
+              }}
+            </span>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 顶部：产品尺寸（全局唯一尺寸入口） -->
     <el-row :gutter="16">
       <el-col :span="24">
@@ -209,16 +245,60 @@
                 </el-form-item>
               </el-col>
             </el-row>
+            <!-- 配送方式 + 头程方式：选项与录入产品同一份，杜绝两边漂移 -->
             <el-row :gutter="12">
               <el-col :xs="24" :sm="12" :md="12">
-                <el-form-item label="物流商 (手动填写)">
+                <el-form-item label="配送方式">
+                  <el-select
+                    v-model="form.shippingMethod"
+                    class="full"
+                  >
+                    <el-option
+                      v-for="item in SHIPPING_METHOD_OPTIONS"
+                      :key="item.code"
+                      :label="item.name"
+                      :value="item.code"
+                    />
+                  </el-select>
+                  <div class="calc-hint" v-if="currentShippingMethod?.remark">
+                    {{ currentShippingMethod.remark }}
+                  </div>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="12">
+                <el-form-item label="头程方式">
+                  <el-select
+                    v-model="form.firstLegMethodCode"
+                    clearable
+                    placeholder="选择后带出材积比与默认单价"
+                    class="full"
+                    @change="handleFirstLegMethodChange"
+                  >
+                    <el-option
+                      v-for="item in FIRST_LEG_METHOD_OPTIONS"
+                      :key="item.code"
+                      :label="item.name"
+                      :value="item.code"
+                    />
+                  </el-select>
+                  <div class="calc-hint" v-if="currentFirstLegMethod?.remark">
+                    {{ currentFirstLegMethod.remark }}
+                  </div>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="12">
+              <el-col :xs="24" :sm="12" :md="12">
+                <el-form-item label="物流商">
                   <el-input
                     v-model="form.logisticsProvider"
                     placeholder="如：云途 / 燕文"
                   />
                 </el-form-item>
               </el-col>
-              <el-col :xs="24" :sm="12" :md="12">
+              <!-- 亚马逊 SEND：整票核算，显示只读的头程总费用 + 商品总数；
+                   自选承运人：显示运费单价（头程方式可自动带出，可手改） -->
+              <el-col :xs="24" :sm="12" :md="12" v-if="!amazonSend">
                 <el-form-item label="运费单价">
                   <el-input
                     v-model.number="form.firstLegPrice"
@@ -229,13 +309,51 @@
                   </el-input>
                 </el-form-item>
               </el-col>
+              <template v-else>
+                <el-col :xs="24" :sm="12" :md="12">
+                  <el-form-item label="头程总费用 (整票)">
+                    <el-input
+                      v-model.number="form.shippingTotalFeeUsd"
+                      type="number"
+                      min="0"
+                      :disabled="sendFeeLocked"
+                    >
+                      <template #append>$</template>
+                    </el-input>
+                    <div class="calc-hint">
+                      {{
+                        sendFeeLocked
+                          ? "从产品档案只读带入，要改请先到产品详情编辑"
+                          : "未关联产品，可手动填写整票配送费"
+                      }}
+                    </div>
+                  </el-form-item>
+                </el-col>
+                <el-col :xs="24" :sm="12" :md="12">
+                  <el-form-item label="商品总数 (整票)">
+                    <el-input
+                      v-model.number="form.totalUnits"
+                      type="number"
+                      min="0"
+                      :disabled="sendFeeLocked"
+                    >
+                      <template #append>件</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+              </template>
             </el-row>
             <el-row :gutter="12">
               <el-col :span="12">
                 <div class="calc-cell is-result">
-                  <span class="calc-label">头程运费 (总)</span>
+                  <span class="calc-label">头程运费 (单件)</span>
                   <span class="calc-value strong">{{
                     money(result.firstLegCostCny)
+                  }}</span>
+                  <span class="calc-hint">{{
+                    amazonSend
+                      ? "头程总费用 × 汇率 ÷ 商品总数"
+                      : "MAX(实重, 抛货体积重) × 运费单价"
                   }}</span>
                 </div>
               </el-col>
@@ -251,7 +369,7 @@
         <el-card shadow="never" class="block-card">
           <template #header>
             <div class="card-header">
-              <span class="card-title">FBA 运费 (尾程) 计算</span>
+              <span class="card-title">FBA费用计算</span>
               <span class="card-sub"
                 >费率随尺寸分段与售价区间浮动，已含燃油附加</span
               >
@@ -327,6 +445,28 @@
                 <el-form-item label="合仓费">
                   <el-input
                     v-model.number="form.storageFeeUsd"
+                    type="number"
+                    min="0"
+                  >
+                    <template #append>$</template>
+                  </el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="入库配置费">
+                  <el-input
+                    v-model.number="form.inboundConfigFeeUsd"
+                    type="number"
+                    min="0"
+                  >
+                    <template #append>$</template>
+                  </el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="月度仓储费">
+                  <el-input
+                    v-model.number="form.monthlyStorageUsd"
                     type="number"
                     min="0"
                   >
@@ -608,6 +748,15 @@
     <!-- 底部操作 -->
     <el-row :gutter="16">
       <el-col :span="24" class="footer-bar">
+        <el-input
+          v-model="planName"
+          placeholder="方案名称（可选），如：CYXY-001 售价 $18.99 方案"
+          class="footer-bar__name"
+          clearable
+        />
+        <el-button type="success" :loading="saving" @click="handleSave"
+          >保存测算</el-button
+        >
         <el-button type="primary" @click="handleReset"
           >重置为示例数据</el-button
         >
@@ -618,10 +767,25 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { commissionCategories, returnThresholds, CALC_CONST } from "./dict.js";
 import { calculate, createDefaultForm } from "./calc.js";
+import { useCommon } from "@/hooks/useCommon.js";
+// 配送方式 / 头程方式的选项直接复用录入产品那份，保证两处下拉永不漂移
+import {
+  SHIPPING_METHOD_OPTIONS,
+  FIRST_LEG_METHOD_OPTIONS,
+  firstLegMethodMap,
+  isAmazonSend,
+} from "@/views/product/options.js";
+import {
+  saveProfit,
+  getProductOptions,
+  getProductPrefill,
+} from "@/api/profit.js";
+
+const { route, getRouteParams, removeRouteParams } = useCommon();
 
 const form = ref(createDefaultForm());
 
@@ -629,6 +793,175 @@ const result = computed(() => calculate(form.value));
 
 const unitLabel = computed(() =>
   form.value.sizeUnit === "cm" ? "cm" : "inch"
+);
+
+/* ================================================================
+   关联产品（可选）：远程搜索 → 选中带出 → 保存时联动 product_fba_fee
+   ================================================================ */
+const selectedProductId = ref(null);
+const productOptions = ref([]);
+const optionsLoading = ref(false);
+const prefillLoading = ref(false);
+const saving = ref(false);
+const planName = ref("");
+
+const searchProducts = async (keyword) => {
+  optionsLoading.value = true;
+  try {
+    // 失败不额外提示：request 拦截器已统一弹错
+    // 后端返回 DictOptionVO（code/name），这里映射成 el-select 需要的 value/label
+    const list = await getProductOptions(keyword);
+    productOptions.value = (list || []).map((o) => ({
+      value: o.code,
+      label: o.name,
+    }));
+  } catch (e) {
+    /* ignore */
+  } finally {
+    optionsLoading.value = false;
+  }
+};
+
+/** 选中产品：调后端 prefill 回填（佣金类目故意不带出，每轮手选） */
+const handleProductChange = async (id) => {
+  if (!id) return; // 清除选择：只解除关联，表单数值保留供继续微调
+  prefillLoading.value = true;
+  try {
+    const data = await getProductPrefill(id);
+    applyPrefill(data);
+    ElMessage.success("已带出产品信息，请补选佣金类目等手填项后测算");
+  } catch (e) {
+    /* ignore */
+  } finally {
+    prefillLoading.value = false;
+  }
+};
+
+/** 后端 prefill（snake_case）→ 本地表单（camelCase）；null 字段不覆盖现值 */
+const applyPrefill = (data) => {
+  if (!data) return;
+  const f = form.value;
+  if (data.size_unit) f.sizeUnit = data.size_unit;
+  if (data.logistics_provider != null)
+    f.logisticsProvider = data.logistics_provider;
+  if (data.return_category) f.returnCategory = data.return_category;
+  if (data.shipping_method) f.shippingMethod = data.shipping_method;
+  if (data.first_leg_method_code != null)
+    f.firstLegMethodCode = data.first_leg_method_code;
+
+  // 数值类：null / 缺省不覆盖（如「自填」头程方式不给单价，保留用户已填值）
+  const numMap = [
+    ["length", "length"],
+    ["width", "width"],
+    ["height", "height"],
+    ["weight_kg", "weightKg"],
+    ["purchase_cost", "purchaseCost"],
+    ["sale_price_usd", "salePriceUsd"],
+    ["first_leg_price", "firstLegPrice"],
+    ["exchange_rate", "exchangeRate"],
+    ["volume_divisor", "volumeDivisor"],
+    ["storage_fee_usd", "storageFeeUsd"],
+    ["inbound_config_fee_usd", "inboundConfigFeeUsd"],
+    ["monthly_storage_usd", "monthlyStorageUsd"],
+    ["shipping_total_fee_usd", "shippingTotalFeeUsd"],
+    ["total_units", "totalUnits"],
+  ];
+  numMap.forEach(([k, fk]) => {
+    const v = data[k];
+    if (v !== null && v !== undefined && v !== "") f[fk] = Number(v);
+  });
+};
+
+/** 保存测算：事务写方案 + 结果快照；选中产品时后端同步 upsert 该产品的 FBA 费用 */
+const handleSave = async () => {
+  const f = form.value;
+  if (!f.salePriceUsd) {
+    ElMessage.warning("请先填写售价再保存");
+    return;
+  }
+  if (!f.commissionCategory) {
+    ElMessage.warning("请先选择佣金类目再保存");
+    return;
+  }
+  saving.value = true;
+  try {
+    // ⚠️ 百分制口径：ad_rate / return_rate / target_margin 直接传百分数（15 = 15%），
+    //    与后端 DTO、profit_plan 存储口径一致；返回值里的比率才是小数
+    const r = await saveProfit({
+      product_id: selectedProductId.value || null,
+      plan_name: planName.value?.trim() || null,
+      size_unit: f.sizeUnit,
+      length: f.length,
+      width: f.width,
+      height: f.height,
+      weight_kg: f.weightKg,
+      purchase_cost: f.purchaseCost,
+      ad_rate: f.adRate,
+      vat_rate: f.vatRate,
+      misc_rate: f.miscRate,
+      volume_divisor: f.volumeDivisor,
+      logistics_provider: f.logisticsProvider,
+      first_leg_price: f.firstLegPrice,
+      shipping_method: f.shippingMethod,
+      first_leg_method_code: f.firstLegMethodCode || null,
+      shipping_total_fee_usd: f.shippingTotalFeeUsd,
+      total_units: f.totalUnits,
+      commission_category: f.commissionCategory,
+      return_category: f.returnCategory,
+      return_rate: f.returnRate,
+      return_fee_usd: f.returnFeeUsd,
+      storage_fee_usd: f.storageFeeUsd,
+      inbound_config_fee_usd: f.inboundConfigFeeUsd,
+      monthly_storage_usd: f.monthlyStorageUsd,
+      sale_price_usd: f.salePriceUsd,
+      exchange_rate: f.exchangeRate,
+      target_margin: f.targetMargin,
+      use_min_commission: f.useMinCommission,
+    });
+    const profit = Number(r.profit_cny).toFixed(2);
+    const margin = (Number(r.margin_rate) * 100).toFixed(2);
+    ElMessage.success(
+      `保存成功（后端口径）：利润 ￥${profit}，利润率 ${margin}%`
+    );
+  } catch (e) {
+    /* ignore */
+  } finally {
+    saving.value = false;
+  }
+};
+
+/* ---------- 入口跳转：列表 / 详情页「测算利润」按钮带产品过来 ---------- */
+const tryEntryProduct = async () => {
+  // toPage 走 store 传参，URL query 兜底；用完即清，避免下次从菜单进来还带旧参数
+  const params = getRouteParams("ToolsProfitCalculator") || {};
+  if (params.productId) removeRouteParams("ToolsProfitCalculator");
+  const productId = params.productId || route.query.product_id;
+  if (!productId) return;
+  if (Number(productId) === Number(selectedProductId.value)) return;
+
+  selectedProductId.value = Number(productId);
+  const productName =
+    params.productName || decodeURIComponent(route.query.product_name || "");
+  if (productName) {
+    // 先塞一条已知 label，避免下拉显示成裸 id
+    productOptions.value = [
+      { value: selectedProductId.value, label: productName },
+    ];
+  }
+  await handleProductChange(selectedProductId.value);
+};
+
+onMounted(async () => {
+  searchProducts("");
+  await tryEntryProduct();
+});
+
+// 同一个 .vue 被复用不会重新 mount（本项目已知坑），入口再次跳进来靠这里补触发
+watch(
+  () => route.fullPath,
+  () => {
+    if (route.name === "ToolsProfitCalculator") tryEntryProduct();
+  }
 );
 
 /* ---------- 格式化 ---------- */
@@ -647,6 +980,30 @@ const lbOzText = (lb) => {
 
 /* ---------- 材积比下拉项 ---------- */
 const volumeDivisorOptions = [5000, 6000];
+
+/* ---------- 头程：配送方式分叉（与录入产品口径一致） ---------- */
+const amazonSend = computed(() => isAmazonSend(form.value.shippingMethod));
+const currentShippingMethod = computed(
+  () =>
+    SHIPPING_METHOD_OPTIONS.find(
+      (item) => item.code === form.value.shippingMethod
+    ) || null
+);
+const currentFirstLegMethod = computed(
+  () => firstLegMethodMap[form.value.firstLegMethodCode] || null
+);
+// 关联产品时，SEND 的整票费用/件数从产品档案只读带入，不允许手改；
+// 纯手动测算（未关联产品）没有数据来源，放开手填，否则算法不可用
+const sendFeeLocked = computed(() => amazonSend.value && !!selectedProductId.value);
+
+// 头程方式切换：带出材积比与默认单价（与录入表单 handleMethodChange 同逻辑）
+const handleFirstLegMethodChange = (code) => {
+  const method = firstLegMethodMap[code];
+  if (!method) return;
+  if (method.volumeDivisor) form.value.volumeDivisor = method.volumeDivisor;
+  if (method.defaultUnitPrice)
+    form.value.firstLegPrice = method.defaultUnitPrice;
+};
 
 /* ---------- 计费重来源标注 ---------- */
 const billWeightBasisText = computed(() =>
@@ -757,7 +1114,15 @@ const detailRows = computed(() => {
     {
       name: "头程运费",
       value: money(r.firstLegCostCny),
-      desc: "MAX(实重, 抛重) × 单价",
+      desc:
+        form.value.shippingMethod === "AMAZON_SEND"
+          ? "亚马逊SEND：整票配送费 × 汇率 ÷ 商品总数"
+          : "自选承运人：MAX(实重, 抛重) × 运费单价",
+    },
+    {
+      name: "入库配置费 / 月度仓储费",
+      value: `${usd(r.inboundConfigFeeUsd)} / ${usd(r.monthlyStorageUsd)}`,
+      desc: "两笔按件计的 FBA 费用，与佣金同口径折人民币进总成本",
     },
     {
       name: "产品总成本",
@@ -795,6 +1160,10 @@ const handleClear = () => {
     miscRate: 0,
     weightKg: 0,
     volumeDivisor: CALC_CONST.volumeDivisor,
+    shippingMethod: "SELF_CARRIER",
+    firstLegMethodCode: "",
+    shippingTotalFeeUsd: 0,
+    totalUnits: 0,
     logisticsProvider: "",
     firstLegPrice: 0,
     commissionCategory: "",
@@ -802,6 +1171,8 @@ const handleClear = () => {
     returnRate: 0,
     returnFeeUsd: 0,
     storageFeeUsd: 0,
+    inboundConfigFeeUsd: 0,
+    monthlyStorageUsd: 0,
     salePriceUsd: 0,
     exchangeRate: form.value.exchangeRate,
     targetMargin: form.value.targetMargin,
@@ -874,6 +1245,14 @@ const handleClear = () => {
   .calc-label {
     font-size: 12px;
     color: var(--el-text-color-secondary);
+  }
+
+  /* 表单项 / 结果格下方的说明小字 */
+  .calc-hint {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    line-height: 1.5;
+    margin-top: 2px;
   }
 
   /* 计算结果卡片：与「只读中间量」区分开，换自定义底色 */
@@ -1010,6 +1389,37 @@ const handleClear = () => {
   .footer-bar {
     display: flex;
     gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .footer-bar__name {
+    width: 320px;
+    max-width: 100%;
+  }
+
+  /* ---------- 顶部关联产品条 ---------- */
+  .product-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .product-bar__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  .product-bar__select {
+    width: 420px;
+    max-width: 100%;
+  }
+
+  .product-bar__mode {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
   }
 }
 </style>
