@@ -50,17 +50,9 @@
 <script setup>
 import { Link, Document, Search } from "@element-plus/icons-vue";
 import { useLayoutStore } from "@/stores/layout.js";
-import { onMounted, ref } from "vue";
-import { getUser } from "@/api/user";
 
-const msg = ref("");
-onMounted(async () => {
-  await getUser();
-  msg.value = await getUser(); // 拿到的是 data，即 "请求成功。"
-  console.log(msg.value);
-  // alert(msg.value);
-});
-
+// 原来这里会在 onMounted 里调 getUser() 打 /api/user —— 那是 V3S 模板的示例接口，
+// 后端 TestController 已删除，加拦截器后只会拿到 401。首页本来就是纯静态展示，直接移除。
 const layoutStore = useLayoutStore();
 const isMac = /mac/i.test(navigator.userAgent);
 

@@ -1,167 +1,22 @@
 [
   {
-    "id": "2",
+    "id": "1",
     "parentId": "0",
     "url": "/home",
     "title": "首页",
     "icon": "icon-shouye",
     "menuType": 0
   },
-
   {
-    "id": "1",
+    "id": "2",
     "parentId": "0",
     "url": "",
-    "title": "菜单示例",
-    "icon": "icon-caidan",
-    "menuType": 1
+    "title": "系统管理",
+    "icon": "icon-settings",
+    "menuType": 0
   },
-  {
-    "id": "0-1",
-    "parentId": "1",
-    "url": "",
-    "title": "路由菜单1",
-    "menuType": 1
-  },
-  {
-    "id": "0-1-1",
-    "parentId": "0-1",
-    "url": "/menu/nested",
-    "title": "路由菜单1-1",
-    "menuType": 1
-  },
-  {
-    "id": "0-3",
-    "parentId": "1",
-    "url": "/menu/normal",
-    "title": "路由菜单2",
-    "menuType": 1
-  },
-
   {
     "id": "3",
-    "parentId": "0",
-    "url": "",
-    "title": "组件示例",
-    "icon": "icon-kaifazujian",
-    "menuType": 1
-  },
-  {
-    "id": "3-0",
-    "parentId": "3",
-    "url": "/component/search",
-    "title": "搜索组件",
-    "menuType": 1
-  },
-  {
-    "id": "3-1",
-    "parentId": "3",
-    "url": "/component/dialog",
-    "title": "弹窗",
-    "menuType": 1
-  },
-  {
-    "id": "3-2",
-    "parentId": "3",
-    "url": "/component/table",
-    "title": "table",
-    "menuType": 1
-  },
-  {
-    "id": "3-3",
-    "parentId": "3",
-    "url": "/component/table-full",
-    "title": "table高度撑满",
-    "menuType": 1
-  },
-  {
-    "id": "3-4",
-    "parentId": "3",
-    "url": "/component/digtal",
-    "title": "数字滚动",
-    "menuType": 1
-  },
-  {
-    "id": "3-5",
-    "parentId": "3",
-    "url": "/component/tree",
-    "title": "树形筛选器",
-    "menuType": 1
-  },
-  {
-    "id": "3-6",
-    "parentId": "3",
-    "url": "/component/seamless",
-    "title": "无缝滚动",
-    "menuType": 1
-  },
-  {
-    "id": "3-7",
-    "parentId": "3",
-    "url": "/component/echarts",
-    "title": "echarts",
-    "menuType": 1
-  },
-  {
-    "id": "3-9",
-    "parentId": "3",
-    "url": "/component/digital-input",
-    "title": "数字输入框",
-    "menuType": 1
-  },
-
-  {
-    "id": "4",
-    "parentId": "0",
-    "url": "",
-    "title": "页面示例",
-    "icon": "icon-kaifazujian",
-    "menuType": 1
-  },
-  {
-    "id": "4-1",
-    "parentId": "4",
-    "url": "/page/full-screen",
-    "title": "全屏展示页",
-    "menuType": 1
-  },
-  {
-    "id": "4-2",
-    "parentId": "4",
-    "url": "/page/transparent",
-    "title": "透明背景页",
-    "menuType": 1
-  },
-  {
-    "id": "4-3",
-    "parentId": "4",
-    "url": "/page/multi-level",
-    "title": "多级页面",
-    "menuType": 1
-  },
-  {
-    "id": "4-3-1",
-    "parentId": "4-3",
-    "url": "/page/multi-level/child",
-    "title": "子页面",
-    "menuType": 1
-  },
-  {
-    "id": "4-4",
-    "parentId": "4",
-    "url": "/page/alias",
-    "title": "动态设置面包屑",
-    "menuType": 1
-  },
-  {
-    "id": "4-4-1",
-    "parentId": "4-4",
-    "url": "/page/alias/operate",
-    "title": "添加页面",
-    "menuType": 1
-  },
-  {
-    "id": "5",
     "parentId": "0",
     "url": "",
     "title": "产品管理",
@@ -169,46 +24,15 @@
     "menuType": 0
   },
   {
-    "id": "5-1",
-    "parentId": "5",
-    "url": "/product/list",
-    "title": "产品列表",
-    "icon": "icon-product-list",
-    "menuType": 0
-  },
-  {
-    "id": "5-2",
-    "parentId": "5",
-    "url": "/product/create",
-    "title": "录入产品信息",
-    "icon": "icon-product-add",
-    "menuType": 0
-  },
-  {
-    "id": "5-1-1",
-    "parentId": "5-1",
-    "url": "/product/detail",
-    "title": "产品详情",
-    "menuType": 1
-  },
-  {
-    "id": "6",
+    "id": "4",
     "parentId": "0",
     "url": "",
-    "title": "工具",
+    "title": "运营工具",
     "icon": "icon-tools",
     "menuType": 0
   },
   {
-    "id": "6-1",
-    "parentId": "6",
-    "url": "/tools/profit-calculator",
-    "title": "利润计算器",
-    "menuType": 0
-  },
-
-  {
-    "id": "7",
+    "id": "5",
     "parentId": "0",
     "url": "",
     "title": "参数列表",
@@ -216,64 +40,118 @@
     "menuType": 0
   },
   {
-    "id": "7-1",
-    "parentId": "7",
+    "id": "6",
+    "parentId": "2",
+    "url": "/system/user",
+    "title": "用户管理",
+    "icon": "icon-system-user",
+    "menuType": 0
+  },
+  {
+    "id": "7",
+    "parentId": "2",
+    "url": "/system/role",
+    "title": "角色管理",
+    "icon": "icon-system-role",
+    "menuType": 0
+  },
+  {
+    "id": "8",
+    "parentId": "2",
+    "url": "/system/menu",
+    "title": "菜单管理",
+    "icon": "icon-system-menu",
+    "menuType": 0
+  },
+  {
+    "id": "9",
+    "parentId": "3",
+    "url": "/product/list",
+    "title": "产品列表",
+    "icon": "icon-product-list",
+    "menuType": 0
+  },
+  {
+    "id": "10",
+    "parentId": "9",
+    "url": "/product/detail",
+    "title": "产品详情",
+    "menuType": 1
+  },
+  {
+    "id": "11",
+    "parentId": "3",
+    "url": "/product/create",
+    "title": "录入产品信息",
+    "icon": "icon-product-add",
+    "menuType": 0
+  },
+  {
+    "id": "12",
+    "parentId": "4",
+    "url": "/tools/profit-calculator",
+    "title": "利润计算器",
+    "menuType": 0
+  },
+  {
+    "id": "13",
+    "parentId": "5",
     "url": "/params/commission",
     "title": "佣金费率",
     "icon": "icon-commission",
     "menuType": 0
   },
   {
-    "id": "7-2",
-    "parentId": "7",
+    "id": "14",
+    "parentId": "5",
     "url": "/params/return-threshold",
     "title": "退货阈值",
     "icon": "icon-return",
     "menuType": 0
   },
   {
-    "id": "7-3",
-    "parentId": "7",
+    "id": "15",
+    "parentId": "5",
     "url": "/params/exchange-rate",
     "title": "汇率变化",
     "icon": "icon-exchange",
     "menuType": 0
   },
   {
-    "id": "7-4",
-    "parentId": "7",
+    "id": "16",
+    "parentId": "5",
     "url": "/params/size-tier",
     "title": "尺寸标准",
     "icon": "icon-size",
     "menuType": 0
   },
   {
-    "id": "7-5",
-    "parentId": "7",
+    "id": "17",
+    "parentId": "5",
     "url": "/params/fba-rate",
     "title": "尺寸收费标准",
     "icon": "icon-rate",
     "menuType": 0
   },
   {
-    "id": "7-6",
-    "parentId": "7",
+    "id": "18",
+    "parentId": "5",
     "url": "/params/first-leg",
     "title": "头程方式",
     "icon": "icon-truck",
     "menuType": 0
   },
   {
-    "id": "7-7",
-    "parentId": "7",
+    "id": "19",
+    "parentId": "5",
     "url": "/params/step-rate",
     "title": "超大件费率",
     "icon": "icon-oversize",
     "menuType": 0
   },
   {
-    "id": "7-8",
-    "parentId": "7",
+    "id": "20",
+    "parentId": "5",
     "url": "/params/sys-config",
     "title": "全局参数",
     "icon": "icon-settings",

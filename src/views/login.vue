@@ -72,17 +72,17 @@
       <!-- 底部提示 -->
       <div class="login-footer">
         <div class="divider">
-          <span>示例提示</span>
+          <!-- <span>示例提示</span> -->
         </div>
-        <p class="tip">
+        <!-- <p class="tip">
           <el-icon class="tip-icon"><InfoFilled /></el-icon>
-          演示账号：admin / 123456
-        </p>
+          初始账号：macong / 123456（登录后请尽快修改密码）
+        </p> -->
       </div>
     </div>
 
-    <!-- 版权信息 -->
-    <div class="copyright">© 2024 V3S Admin. All rights reserved.</div>
+    <!-- 版权信息：改为展示当前版本号，随 version.json 自动更新 -->
+    <div class="copyright">Version {{ appVersion }}</div>
   </div>
 </template>
 
@@ -91,14 +91,17 @@ import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user.js";
 import { storeToRefs } from "pinia";
-import { arr2tree, setLocalStorage } from "@/utils/index.js";
-import menuJson from "@/router/menu.json";
-import { menuKey } from "@/router/menuConfig.js";
+import { setLocalStorage } from "@/utils/index.js";
 import { useLayoutStore } from "@/stores/layout.js";
 import { User, Lock, InfoFilled } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import cookies from "js-cookie";
-import { login } from "@/api/user";
+import { login, getMenus } from "@/api/user";
+
+// 当前版本号：取自 version.json，由 vite.config.mjs 的 define 注入为全局常量 __APP_VERSION__。
+// 登录页底部展示版本号时直接引用它，发版只需改 version.json 一处，版权栏会自动同步，
+// 不用像以前那样手动改一行写死的版权文字。
+const appVersion = __APP_VERSION__;
 
 const layoutStore = useLayoutStore();
 const { isNavigating } = storeToRefs(layoutStore);
@@ -128,32 +131,37 @@ const handleLogin = async () => {
   });
 
   try {
-    // 账号密码交给后端校验，目前后端写死 admin / 123456
+    // 账号密码交给后端查 sys_user + BCrypt 校验
     const res = await login({
       username: form.username.trim(),
       password: form.password,
     });
 
-    // token 存 cookie，退出登录时 removeAllLoginInfo 会一并清除
+    // 必须先写 cookie：request.js 的请求拦截器从 cookie 读 Authorization，
+    // 紧接着拿菜单树这一步就已经需要带 token 了。
     cookies.set("Authorization", res.token);
 
-    const menu = arr2tree(menuJson, {
-      id: menuKey.id,
-      parentId: menuKey.parentId,
-      children: menuKey.children,
-    });
+    // 菜单改由后端按角色下发。返回的已经是带 children 的树，
+    // 直接存即可，不要再套 arr2tree（会重复挂 children 把层级弄乱）。
+    // 顺带治好了老毛病：改菜单不用再退出重登录。
+    const menu = await getMenus();
 
+    // store 里的 key 仍叫 userInfo，保持 persist / localStorage 结构不变；
+    // 只是值从旧的 UserInfoVO 换成了带角色信息的 CurrentUserVO。
     userStore.$patch((state) => {
-      state.userInfo = res.userInfo;
+      state.userInfo = res.user;
       state.menu = menu;
     });
     // 同步写入 localStorage，确保路由守卫跳转时已能读到登录信息
-    setLocalStorage("user", { userInfo: res.userInfo, menu });
+    setLocalStorage("user", { userInfo: res.user, menu });
 
     ElMessage.success("登录成功");
     router.replace({ path: "/" });
   } catch (e) {
-    // 失败提示已由 request 响应拦截器统一弹出，这里无需重复处理
+    // 失败提示已由 request 响应拦截器统一弹出，这里无需重复处理。
+    // 但如果菜单树没拿到，cookie 已经写进去了，得撤掉，
+    // 否则会留下「有 token 却没有菜单」的半登录状态。
+    cookies.remove("Authorization");
   } finally {
     layoutStore.$patch((state) => {
       state.isNavigating = false;

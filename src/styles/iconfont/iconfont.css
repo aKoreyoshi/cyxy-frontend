@@ -33,20 +33,13 @@
   content: "\e751";
 }
 
-.icon-caidan:before {
-  content: "\e652";
-}
-
-.icon-kaifazujian:before {
-  content: "\e640";
-}
-
+/* 示例菜单专用的 icon-caidan / icon-kaifazujian 已随三组示例页面一起删除 */
 .icon-enter:before {
   content: "\e95c";
 }
 
 /* ===== 自定义业务菜单图标（mask 方案） =====
-   字体文件里只有上面 8 个图标，业务图标用 CSS mask 内联 feather SVG 补齐。
+   字体文件原生只有上面这几个图标，业务图标用 CSS mask 内联 feather SVG 补齐。
    background-color: currentColor 让图形颜色跟随菜单文字，深色/浅色主题自动适配。
    公共属性集中在这里；每个图标只需在下面覆写 --cyxy-icon 一行即可换图。
    注意：字体图标靠 :before 出图，mask 方案必须把 :before 的 content 清成 ""，
@@ -63,7 +56,10 @@
 .icon-rate,
 .icon-truck,
 .icon-oversize,
-.icon-settings {
+.icon-settings,
+.icon-system-user,
+.icon-system-role,
+.icon-system-menu {
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -85,7 +81,10 @@
 .icon-rate:before,
 .icon-truck:before,
 .icon-oversize:before,
-.icon-settings:before {
+.icon-settings:before,
+.icon-system-user:before,
+.icon-system-role:before,
+.icon-system-menu:before {
   content: "";
 }
 
@@ -153,4 +152,19 @@
 /* 录入产品信息：新建表单（feather file-plus） */
 .icon-product-add {
   --cyxy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='12' y1='18' x2='12' y2='12'/%3E%3Cline x1='9' y1='15' x2='15' y2='15'/%3E%3C/svg%3E");
+}
+
+/* ===== 系统管理菜单图标（2026-11-05） =====
+   三个页面共用上面那套公共 mask 属性，这里只覆写 --cyxy-icon 一行。 */
+/* 用户管理：单人（feather user） */
+.icon-system-user {
+  --cyxy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+}
+/* 角色管理：多人（feather users） */
+.icon-system-role {
+  --cyxy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M23 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E");
+}
+/* 菜单管理：文件夹（feather folder） */
+.icon-system-menu {
+  --cyxy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/%3E%3C/svg%3E");
 }
