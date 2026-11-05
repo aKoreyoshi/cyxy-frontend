@@ -17,6 +17,25 @@ import {
  */
 const USE_MOCK = false;
 
+/**
+ * 上传产品主图，返回 { url }。
+ * 走 @/utils/request 而不是裸 axios：这里返回的是普通 JSON Result，
+ * 拦截器能正常识别 code；只有「下载文件流」才需要绕过它（见 downloadImportTemplate）。
+ */
+export const uploadProductImage = file => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request({
+    url: "/api/upload",
+    method: "post",
+    data: formData,
+    headers: { "Content-Type": "multipart/form-data" },
+    // 主图上限已放宽到 10MB，本地还要走公网传到上海 COS，60s 容易超时；
+    // 与批量导入保持一致用 120s（导入本来也是大文件 + 慢解析）。
+    timeout: 120 * 1000,
+  });
+};
+
 // 分页列表（含搜索条件）
 export const getProductList = params => {
   if (USE_MOCK) return mockList(params);

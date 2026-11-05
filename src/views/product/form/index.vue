@@ -4,7 +4,9 @@
       <template #header>
         <div class="card-header">
           <span class="card-title">录入产品信息</span>
-          <span class="card-sub">字段与数据库 product 表一一对应，带 * 为必填</span>
+          <span class="card-sub"
+            >字段与数据库 product 表一一对应，带 * 为必填</span
+          >
         </div>
       </template>
 
@@ -14,7 +16,9 @@
     </el-card>
 
     <div class="footer-bar">
-      <el-button type="primary" :loading="submitting" @click="handleSubmit">提交</el-button>
+      <el-button type="primary" :loading="submitting" @click="handleSubmit"
+        >提交</el-button
+      >
       <el-button @click="handleReset">重置</el-button>
       <el-button @click="handleBack">返回列表</el-button>
     </div>
@@ -80,8 +84,15 @@ const rules = PRODUCT_FORM_RULES;
 
 // 提交
 const handleSubmit = () => {
+  // 子组件还在上传时拦一下：此刻 main_image 仍是旧值或空串，
+  // 放行会让用户以为图传了、实际存进库的却没有。
+
+  if (fieldsRef.value?.isImageUploading?.()) {
+    ElMessage.warning("主图还在上传中，请稍候");
+    return;
+  }
   if (!formRef.value) return;
-  formRef.value.validate(valid => {
+  formRef.value.validate((valid) => {
     if (!valid) return;
     submitting.value = true;
     createProduct({ ...form.value })

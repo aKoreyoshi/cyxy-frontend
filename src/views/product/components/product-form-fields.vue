@@ -75,17 +75,14 @@
       </el-col>
       <el-col :xs="24" :md="12">
         <el-form-item label="产品主图" prop="main_image" ref="imageItemRef">
-          <!--
-            选图上传（过渡实现）：后端对象存储 / /api/upload 尚未接入，
-            这里先用 FileReader 转成 dataURL 直接当图片地址用，界面即可完整跑通。
-            接入对象存储后，只需把 handleImageChange 改成「先上传拿 URL 再回填」，
-            main_image 仍然是地址字符串，列表/详情/缩略图组件都不用动。
-          -->
+          <!-- 主图走后端 /api/upload 传到 COS，回填的是公网 URL；
+       main_image 仍是地址字符串，列表/详情的 ProductThumb 不用改。 -->
           <div class="image-upload">
             <el-upload
               ref="uploadRef"
               action="#"
               :auto-upload="false"
+              :disabled="imageUploading"
               :show-file-list="false"
               :accept="IMAGE_ACCEPT"
               :on-change="handleImageChange"
@@ -93,11 +90,15 @@
             >
               <div v-if="imageUrl" class="image-upload__preview">
                 <img :src="imageUrl" alt="产品主图预览" />
-                <span class="image-upload__mask">点击替换</span>
+                <span class="image-upload__mask">{{
+                  imageUploading ? "上传中…" : "点击替换"
+                }}</span>
               </div>
               <div v-else class="image-upload__placeholder">
                 <el-icon :size="22"><Plus /></el-icon>
-                <span>点击上传产品主图</span>
+                <span>{{
+                  imageUploading ? "上传中…" : "点击上传产品主图"
+                }}</span>
               </div>
             </el-upload>
             <div class="image-upload__bar">
@@ -110,7 +111,9 @@
               >
                 移除
               </el-button>
-              <span class="form-tip">支持 jpg / png / webp / gif，建议 ≤ 2MB</span>
+              <span class="form-tip"
+                >支持 jpg / png / webp / gif，建议 ≤ 10MB</span
+              >
             </div>
           </div>
         </el-form-item>
@@ -358,7 +361,8 @@
             已确认送达，预计送达时间已锁定；需要修改请先到详情页「撤销确认」
           </div>
           <div class="form-tip" v-else>
-            填了就是「配送中」；货到后到详情页点「确认送达」判定提前 / 准时 / 晚送达
+            填了就是「配送中」；货到后到详情页点「确认送达」判定提前 / 准时 /
+            晚送达
           </div>
         </el-form-item>
       </el-col>
@@ -488,6 +492,8 @@ import {
   getDeliveryDaysText,
 } from "../options.js";
 
+import { uploadProductImage } from "@/api/product.js";
+
 // 类目来自后端字典，进页面就拉（模块级缓存，多个页面只打一次接口）
 onMounted(() => {
   loadCategoryOptions();
@@ -497,48 +503,56 @@ onMounted(() => {
 const form = defineModel({ type: Object, required: true });
 
 /* ------------------------------------------------------------------ */
-/* 产品主图：选图上传（过渡实现，等对象存储接口就绪再改成真上传）        */
+/* 产品主图：选图后先调后端 /api/upload 传到 COS，回填公网 URL          */
+/* 表单里存的始终是一串地址（varchar(512)），不再是 dataURL            */
 /* ------------------------------------------------------------------ */
 const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 const IMAGE_TYPES = IMAGE_ACCEPT.split(",");
-const IMAGE_MAX_SIZE = 2 * 1024 * 1024; // 2MB
+const IMAGE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 const uploadRef = ref();
 const imageItemRef = ref();
+const imageUploading = ref(false);
 
-// 已有地址（mock 的 http URL / 编辑态回显）或刚选的 dataURL，都能直接当 src
+// 已有 URL / 编辑态回显 / 刚上传成功的 URL，都能直接当 src
 const imageUrl = computed(() => form.value.main_image || "");
 
-const handleImageChange = uploadFile => {
+const handleImageChange = async (uploadFile) => {
   const raw = uploadFile?.raw;
   if (!raw) return;
+  // 每次选完立刻清空内部列表，保证连选同一张图也会触发 on-change
+  uploadRef.value?.clearFiles();
 
   if (!IMAGE_TYPES.includes(raw.type)) {
     ElMessage.error("仅支持 jpg / png / webp / gif 格式的图片");
-    uploadRef.value?.clearFiles();
-    return;
-  }
-  if (raw.size > IMAGE_MAX_SIZE) {
-    ElMessage.error("图片不能超过 2MB");
-    uploadRef.value?.clearFiles();
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = e => {
-    // 过渡：先转成 dataURL 当地址用，界面即可完整跑通（刷新不持久化）。
-    // TODO 接入对象存储后：改成调用上传接口，把返回的 URL 回填到这里，
-    //      main_image 仍是地址字符串，其它组件一律不用改。
-    form.value.main_image = String(e.target?.result || "");
-    // el-upload 不会触发 el-form-item 的 change 校验，手动清掉残留的红字提示
+  if (raw.size > IMAGE_MAX_SIZE) {
+    ElMessage.error("图片不能超过 10MB");
+    return;
+  }
+
+  imageUploading.value = true;
+
+  try {
+    // 关键改动：不再 FileReader 转 dataURL，改成先传 COS、拿回短 URL 再回填。
+    // dataURL 有几 MB，varchar(512) 根本存不下；URL 才一百多字符。
+    const { url } = await uploadProductImage(raw);
+    form.value.main_image = url;
+    // el-upload 不会触发 el-form-item 的 change 校验，手动清掉残留红字
     imageItemRef.value?.clearValidate();
-  };
-  reader.readAsDataURL(raw);
-  // 清空内部文件列表，保证连选同一张图也会触发 on-change
-  uploadRef.value?.clearFiles();
+  } catch (e) {
+    // 这里不弹提示：request.js 的响应拦截器已经弹过后端 msg 了，再弹会重复。
+    // 刻意不动 form.main_image —— 换图失败时旧图要留着，别让用户白丢一张。
+  } finally {
+    imageUploading.value = false;
+  }
 };
 
 const handleImageRemove = () => {
+  // 只清前端字段，不删 COS 对象：按定案「换图/软删先不联动删图」，
+  // 以后统一用生命周期规则清理孤儿文件。
   form.value.main_image = "";
   uploadRef.value?.clearFiles();
 };
@@ -554,7 +568,10 @@ const currentMethod = computed(
 // 空值按自选承运人处理，与详情页 / getShippingMethodName 口径一致
 const amazonSend = computed(() => isAmazonSend(form.value.shipping_method));
 const currentShippingMethod = computed(
-  () => SHIPPING_METHOD_OPTIONS.find(item => item.code === form.value.shipping_method) || null
+  () =>
+    SHIPPING_METHOD_OPTIONS.find(
+      (item) => item.code === form.value.shipping_method
+    ) || null
 );
 
 /* ------------------------------------------------------------------ */
@@ -564,7 +581,8 @@ const currentShippingMethod = computed(
 const deliveryLocked = computed(() => isDelivered(form.value));
 const deliveryStatusInfo = computed(() => getDeliveryStatus(form.value));
 const deliveryDaysText = computed(() => getDeliveryDaysText(form.value));
-const text = val => (val === null || val === undefined || val === "" ? "--" : val);
+const text = (val) =>
+  val === null || val === undefined || val === "" ? "--" : val;
 
 /* 尺寸分段：只用于展示，值由下方 watch 回写到 form.size_tier_code */
 const sizeTier = computed(() => {
@@ -602,6 +620,8 @@ defineExpose({
   resetLocal() {
     volumeDivisor.value = 6000;
   },
+  // 暴露成方法而不是直接暴露 ref，避免父组件访问 expose 时 ref 解包的歧义
+  isImageUploading: () => imageUploading.value,
 });
 </script>
 
