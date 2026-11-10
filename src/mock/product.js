@@ -48,7 +48,7 @@ export const mockProducts = [
     tariff_fee: null,
     first_leg_method_code: "SEA",
     logistics_provider: "云途物流",
-    first_leg_unit_price: null, // 亚马逊 SEND：费用由后台整票核算
+    first_leg_unit_price: null, // 亚马逊 SEND：费用按当前产品核算（$），不填运费单价
     shipping_method: "AMAZON_SEND",
     shipping_total_fee_usd: 465.0,
     total_units: 500,
@@ -159,7 +159,7 @@ export const mockProducts = [
     tariff_fee: null,
     first_leg_method_code: "SEA",
     logistics_provider: "云途物流",
-    first_leg_unit_price: null, // 亚马逊 SEND：费用由后台整票核算
+    first_leg_unit_price: null, // 亚马逊 SEND：费用按当前产品核算（$），不填运费单价
     shipping_method: "AMAZON_SEND",
     shipping_total_fee_usd: 1280.0,
     total_units: 100,

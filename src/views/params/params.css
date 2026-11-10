@@ -118,6 +118,17 @@ html.dark .params-page {
   white-space: nowrap;
 }
 
+/* 全局参数「最新汇率」行：按钮下方那行修改时间。
+   12px 淡色 + 不换行，避免把操作列撑高；tabular-nums 让时间戳对齐 */
+.params-rate-updated {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--pg-faint);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- 面板：一个 1px border，无阴影，无渐变 ---------- */
 .params-panel {
   background: var(--pg-surface);

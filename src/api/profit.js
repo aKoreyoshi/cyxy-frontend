@@ -51,3 +51,20 @@ export const getProductPrefill = productId => {
     params: { productId },
   });
 };
+
+/**
+ * 尾程退货费自动带出：只按「实际计费重」查 dict_return_processing_fee。
+ * tierCode 是可选收窄条件（计算器自己算出的尺寸分段），传空后端就全表按重量匹配，
+ * 不需要用户为了带出一个费用多填一项。
+ * 返回值只作为输入框的建议值，输入框不锁定、不加 disabled，用户随时可手改；
+ * 手改后的值照常随 calc / save 提交，后端不会用查表值覆盖。
+ * ⚠️ query 参数用 camelCase：全局 SNAKE_CASE 只作用于 JSON，
+ *    @RequestParam 认的是 Java 参数名，与 product-prefill 的 productId 同理。
+ */
+export const getReturnFee = (tierCode, billWeightLb) => {
+  return request({
+    url: "/api/profit/return-fee",
+    method: "get",
+    params: { tierCode, billWeightLb },
+  });
+};

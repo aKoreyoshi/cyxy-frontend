@@ -313,18 +313,39 @@
           />
         </el-form-item>
       </el-col>
-      <!-- 亚马逊 SEND 由后台整票核算费用，没有运费单价；两者按配送方式二选一显示 -->
-      <el-col :xs="24" :md="12" v-if="!amazonSend">
-        <el-form-item label="头程运费单价">
-          <el-input
-            v-model.number="form.first_leg_unit_price"
-            type="number"
-            min="0"
-          >
-            <template #append>￥/kg</template>
-          </el-input>
-        </el-form-item>
-      </el-col>
+      <!--
+        ⚠️ 两个「配送总费用」按配送方式二选一，绝不同时出现，也别互相换算：
+          亚马逊SEND   → 配送总费用($)：亚马逊后台核算、美元，当前产品的费用（不是整票货件）；
+          自己选择承运人 → 配送总费用(￥)：自己找物流商结算、人民币，与「头程运费单价」同组填写。
+        币种和来源都不同，靠标签上的币种 + 条件显示做区分，填错等于把美元当人民币存进去。
+      -->
+      <template v-if="!amazonSend">
+        <el-col :xs="24" :md="12">
+          <el-form-item label="头程运费单价">
+            <el-input
+              v-model.number="form.first_leg_unit_price"
+              type="number"
+              min="0"
+            >
+              <template #append>￥/kg</template>
+            </el-input>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="12">
+          <el-form-item label="配送总费用(￥)">
+            <el-input
+              v-model.number="form.shipping_total_fee_cny"
+              type="number"
+              min="0"
+            >
+              <template #append>￥</template>
+            </el-input>
+            <div class="form-tip">
+              自己选择承运人时填写：当前产品的配送总费用，与头程单价同组
+            </div>
+          </el-form-item>
+        </el-col>
+      </template>
       <el-col :xs="24" :md="12" v-else>
         <el-form-item label="配送总费用($)">
           <el-input
@@ -334,15 +355,19 @@
           >
             <template #append>$</template>
           </el-input>
-          <div class="form-tip">亚马逊后台核算的整票货件配送费</div>
+          <div class="form-tip">
+            亚马逊SEND 时填写：当前产品的配送费（美元），不是整票货件费用
+          </div>
         </el-form-item>
       </el-col>
       <el-col :xs="24" :md="12">
-        <el-form-item label="商品总数">
+        <el-form-item label="商品总数量">
           <el-input v-model.number="form.total_units" type="number" min="0">
             <template #append>件</template>
           </el-input>
-          <div class="form-tip">本票货件的总件数</div>
+          <div class="form-tip">
+            当前产品的总数量；一行只记一种产品，不要填整票货件总件数
+          </div>
         </el-form-item>
       </el-col>
       <el-col :xs="24" :md="12">
@@ -564,7 +589,8 @@ const currentMethod = computed(
   () => firstLegMethodMap[form.value.first_leg_method_code] || null
 );
 
-// 配送方式：亚马逊 SEND 显示「配送总费用($)」，自选承运人显示「头程运费单价」。
+// 配送方式决定显示哪一组费用字段（两个「配送总费用」互斥，不会同时出现）：
+// 亚马逊SEND → 配送总费用($)；自己选择承运人 → 头程运费单价 + 配送总费用(￥)。
 // 空值按自选承运人处理，与详情页 / getShippingMethodName 口径一致
 const amazonSend = computed(() => isAmazonSend(form.value.shipping_method));
 const currentShippingMethod = computed(

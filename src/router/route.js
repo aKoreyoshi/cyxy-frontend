@@ -14,11 +14,14 @@ const ProductList = () => import("@/views/product/list/index.vue");
 const ProductForm = () => import("@/views/product/form/index.vue");
 const ProductDetail = () => import("@/views/product/detail/index.vue");
 // 参数列表：5 张普通二维字典表共用一个页面组件，按 path 末段区分字典类型；
-// fba-rate（尺寸收费标准）、commission、exchange 是各自的专属页
+// fba-rate（尺寸收费标准）、commission、exchange、return-fee（尾程退货费）
+// 是各自的专属页 —— return-fee 要按 7 个分组展示「原表发货重量 / 实际匹配区间」，
+// 二维表格装不下，所以单独一个组件
 const ParamsTable = () => import("@/views/params/table/index.vue");
 const ParamsFbaRate = () => import("@/views/params/fba-rate/index.vue");
 const ParamsCommission = () => import("@/views/params/commission/index.vue");
 const ParamsExchange = () => import("@/views/params/exchange/index.vue");
+const ParamsReturnFee = () => import("@/views/params/return-fee/index.vue");
 // 系统管理：三个页面只对超管可见。
 // 可见性由后端菜单树控制（非超管会被过滤掉 SYSTEM_ 组），前端只负责注册路由，
 // 不要在路由表里写死权限判断 —— 那是后端拦截器的活。
@@ -52,6 +55,7 @@ const route = [
   { path: "/params/sys-config", name: "ParamsSysConfig", component: ParamsTable },
   { path: "/params/commission", name: "ParamsCommission", component: ParamsCommission },
   { path: "/params/exchange-rate", name: "ParamsExchange", component: ParamsExchange },
+  { path: "/params/return-fee", name: "ParamsReturnFee", component: ParamsReturnFee },
 
   // 系统管理：url 必须和 sys_menu 里 SYSTEM_USER / SYSTEM_ROLE /
   // SYSTEM_MENU 三条记录的 url 完全一致，否则路由守卫会判成 404。

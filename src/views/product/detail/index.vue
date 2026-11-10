@@ -156,7 +156,12 @@
           <el-descriptions-item label="物流商">{{
             text(detail.logistics_provider)
           }}</el-descriptions-item>
-          <!-- 亚马逊 SEND 整票核算费用，没有运费单价；两者按配送方式二选一显示 -->
+          <!--
+            ⚠️ 两个「配送总费用」按配送方式二选一展示，与录入表单口径一致：
+              亚马逊SEND → 配送总费用($)；自己选择承运人 → 头程运费单价 + 配送总费用(￥)。
+            这里故意写三个平级 v-if 而不是 v-if/v-else：两项同属自选承运人，
+            混用 v-else 容易让人看错哪一项跟谁配对。
+          -->
           <el-descriptions-item label="头程运费单价" v-if="!amazonSend">
             {{
               detail.first_leg_unit_price == null
@@ -164,14 +169,21 @@
                 : `￥${detail.first_leg_unit_price} /kg`
             }}
           </el-descriptions-item>
-          <el-descriptions-item label="配送总费用($)" v-else>
+          <el-descriptions-item label="配送总费用(￥)" v-if="!amazonSend">
+            {{
+              detail.shipping_total_fee_cny == null
+                ? "--"
+                : `￥${detail.shipping_total_fee_cny}`
+            }}
+          </el-descriptions-item>
+          <el-descriptions-item label="配送总费用($)" v-if="amazonSend">
             {{
               detail.shipping_total_fee_usd == null
                 ? "--"
-                : `$${detail.shipping_total_fee_usd}（整票）`
+                : `$${detail.shipping_total_fee_usd}`
             }}
           </el-descriptions-item>
-          <el-descriptions-item label="商品总数">
+          <el-descriptions-item label="商品总数量">
             {{ detail.total_units == null ? "--" : `${detail.total_units} 件` }}
           </el-descriptions-item>
           <el-descriptions-item label="预计送达时间">
@@ -497,7 +509,8 @@ const text = (val) =>
   val === null || val === undefined || val === "" ? "--" : val;
 const money = (val) => `￥${Number(val || 0).toFixed(2)}`;
 
-// 配送方式是否亚马逊 SEND：决定「头程运费单价」与「配送总费用($)」哪个展示。
+// 配送方式是否亚马逊 SEND：决定展示哪一组费用字段（两个「配送总费用」互斥）：
+// SEND → 配送总费用($)；自己选择承运人 → 头程运费单价 + 配送总费用(￥)。
 // 空值按自选承运人处理（历史数据兼容），与表单口径一致
 const amazonSend = computed(() => isAmazonSend(detail.shipping_method));
 

@@ -90,7 +90,7 @@
     "id": "12",
     "parentId": "4",
     "url": "/tools/profit-calculator",
-    "title": "利润计算器",
+    "title": "利润测算",
     "menuType": 0
   },
   {
@@ -155,6 +155,14 @@
     "url": "/params/sys-config",
     "title": "全局参数",
     "icon": "icon-settings",
+    "menuType": 0
+  },
+  {
+    "id": "21",
+    "parentId": "5",
+    "url": "/params/return-fee",
+    "title": "尾程退货费",
+    "icon": "icon-return-fee",
     "menuType": 0
   }
 ]

@@ -50,13 +50,16 @@
           </template>
         </el-dropdown>
 
-        <!-- 批量导入：一次录多个产品走这里，单个产品走右边「录入产品」手工填 -->
+        <!-- 批量导入：一次录多个产品走这里，单个产品走右边「录入产品」手工填。
+             优化期间只弹提示、不打开导入弹窗。按钮故意不加 disabled：
+             一旦禁用，点击事件根本不会触发，用户也就看不到「暂未开放」的说明。
+             优化完成后把 @click 改回 showImport = true 即可恢复原功能。 -->
         <el-button
           size="small"
           type="primary"
           plain
           icon="Upload"
-          @click="showImport = true"
+          @click="handleImportClick"
         >
           批量导入
         </el-button>
@@ -255,9 +258,23 @@ watch(density, (val) => localStorage.setItem(DENSITY_KEY, val));
 
 const loading = ref(false);
 const searchData = ref({});
-// 批量导入弹窗
+/* 批量导入弹窗：优化期间组件和状态都先留着，只是不再有任何入口把 showImport 置为 true，
+   所以下载模板 / 上传入库这两条实际链路都走不通。等优化完成，恢复时只需改回按钮的 @click，
+   不用把弹窗引用、import、success 回调重新接一遍。 */
 const showImport = ref(false);
 const handleImportSuccess = () => fn_getList(tableData.pages.pageNumber);
+
+/* 批量导入优化中，点击只给说明、不打开弹窗。
+   用 ElMessageBox.alert 而不是 ElMessage 轻提示：需求要的是「弹框」，
+   轻提示一闪而过容易被忽略，alert 带确认按钮能把「暂未开放」明确交付给用户。
+   末尾 .catch 兜住按 ESC / 点遮罩关闭时产生的 rejection，
+   写法与本页删除确认保持一致，避免控制台冒未处理的 Promise 错误。 */
+const handleImportClick = () => {
+  ElMessageBox.alert("该功能目前在优化当中，暂未开放", "提示", {
+    type: "info",
+    confirmButtonText: "我知道了",
+  }).catch(() => {});
+};
 
 /* 搜索配置：key 直接对应后端查询参数名，接后端时无需改名
  * 用 computed 而非 ref —— 类目选项是接口异步回来的，

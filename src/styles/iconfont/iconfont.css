@@ -59,7 +59,8 @@
 .icon-settings,
 .icon-system-user,
 .icon-system-role,
-.icon-system-menu {
+.icon-system-menu,
+.icon-return-fee {
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -84,7 +85,8 @@
 .icon-settings:before,
 .icon-system-user:before,
 .icon-system-role:before,
-.icon-system-menu:before {
+.icon-system-menu:before,
+.icon-return-fee:before {
   content: "";
 }
 
@@ -147,6 +149,13 @@
 /* 全局参数：设置（feather settings） */
 .icon-settings {
   --cyxy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E");
+}
+
+/* 尾程退货费：退回箭头 + 美元曲线（2026-11-10 新增）。
+   ⚠️ mask 方案必须同时在上面两组选择器里登记，尤其 :before 要清 content，
+   否则字体会多顶出一个空白字符，图标会偏位。 */
+.icon-return-fee {
+  --cyxy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='1 4 1 10 7 10'/%3E%3Cpath d='M3.51 15a9 9 0 1 0 2.13-9.36L1 10'/%3E%3Cline x1='12' y1='7' x2='12' y2='17'/%3E%3Cpath d='M15 9.5c-.6-.9-1.7-1.5-3-1.5-1.7 0-3 .9-3 2.2 0 3 6 1.3 6 4.3 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.6-3-1.5'/%3E%3C/svg%3E");
 }
 
 /* 录入产品信息：新建表单（feather file-plus） */

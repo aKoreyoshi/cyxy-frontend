@@ -142,7 +142,8 @@ export function calculate(form) {
   const weightLb = weightKg * UNIT_FACTORS.kgToLb;
 
   /* 3. 头程运费：按配送方式分叉（与录入产品的口径一致）
-     AMAZON_SEND：亚马逊整票核算，单件 = 配送总费用($) × 汇率 ÷ 商品总数；件数缺失按 0 处理
+     AMAZON_SEND：单件 = 当前产品配送总费用($) × 汇率 ÷ 当前产品件数；件数缺失按 0 处理。
+     费用与件数都从「整票」改成「当前产品」，分子分母同步缩小，所以公式本身不用改
      SELF_CARRIER（含空值，历史口径）：取实重与抛重大者 × 单价 */
   let firstLegCostCny;
   if (form.shippingMethod === "AMAZON_SEND") {
@@ -283,6 +284,7 @@ export function createDefaultForm() {
     inboundConfigFeeUsd: 0,
     monthlyStorageUsd: 0,
     salePriceUsd: 18.99,
+    // 仅作离线兜底初值；页面挂载后会用全局参数「最新汇率」覆盖（见 index.vue）
     exchangeRate: DEFAULT_EXCHANGE_RATE,
     targetMargin: 15,
     useMinCommission: false,

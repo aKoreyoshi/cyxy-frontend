@@ -7,8 +7,12 @@
         <p class="params-note">{{ meta.note }}</p>
       </div>
       <div class="params-head__side">
-        <span class="params-count">共 <strong>{{ rows.length }}</strong> 条</span>
-        <el-button size="small" :loading="loading" @click="load">刷新</el-button>
+        <span class="params-count"
+          >共 <strong>{{ rows.length }}</strong> 条</span
+        >
+        <el-button size="small" :loading="loading" @click="load"
+          >刷新</el-button
+        >
         <el-button size="small" disabled>编辑</el-button>
         <span class="params-edit-hint">编辑功能后续版本开放</span>
       </div>
@@ -32,10 +36,14 @@
         <i class="params-state__dot"></i>
         <span class="params-state__text">
           读取「{{ meta.title }}」失败：{{ error }}。{{
-            lastLoadedAt ? `上次成功读取于 ${lastLoadedAt}。` : "尚未成功读取过。"
+            lastLoadedAt
+              ? `上次成功读取于 ${lastLoadedAt}。`
+              : "尚未成功读取过。"
           }}
         </span>
-        <el-button link type="primary" size="small" @click="load">重试</el-button>
+        <el-button link type="primary" size="small" @click="load"
+          >重试</el-button
+        >
       </div>
 
       <RhTable v-else :table-data="tableData" border>
@@ -43,6 +51,29 @@
           <div class="params-empty">
             这张字典表还没有数据，导入之后会在这里按口径逐条列出。
           </div>
+        </template>
+
+        <!-- operate 是 RhTable 约定的操作列插槽。只有「全局参数」页的
+             「最新汇率」这一行会用到；其他参数页没有 operate 列，插槽不会被渲染，
+             所以这里加东西不会波及后期才开放编辑功能的那些页面。 -->
+        <template #operate="{ scope }">
+          <template v-if="isExchangeRateRow(scope.row)">
+            <el-button
+              size="small"
+              type="primary"
+              :loading="rateSyncing"
+              @click="handleFetchLatestRate"
+              link
+            >
+              获取最新汇率
+            </el-button>
+            <!-- 修改时间直接取当前行的 updated_time：点完按钮会重载表格，
+                 两边必然同步，不需要再单独维护一份状态 -->
+            <div class="params-rate-updated">
+              更新于 {{ scope.row.updated_time || "--" }}
+            </div>
+          </template>
+          <span v-else>--</span>
         </template>
       </RhTable>
 
@@ -54,7 +85,9 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
+import { ElMessage } from "element-plus";
 import { getDictTable } from "@/api/dict.js";
+import { refreshExchangeRate } from "@/api/exchange-rate.js";
 import { DICT_COLUMNS, DICT_META, formatRows } from "../columns.js";
 import "../params.css";
 
@@ -94,6 +127,34 @@ const load = async () => {
     rows.value = [];
   } finally {
     loading.value = false;
+  }
+};
+
+/* ------------------------------------------------------------------
+   全局参数「最新汇率」行的专属动作
+   —— 与利润测算页「取最新」、汇率变化页「同步最新汇率」调同一个后端接口：
+      后端去外部 API 取真·最新值，一个事务里写历史表 + 更新全局参数。
+      使用者不必知道汇率存在哪张表，点一下就是拿到最新汇率并生效。
+   ------------------------------------------------------------------ */
+const rateSyncing = ref(false);
+
+/** 只在「全局参数」页的 DEFAULT_EXCHANGE_RATE 这一行渲染按钮，其余行保持 "--" */
+const isExchangeRateRow = (row) =>
+  type.value === "sys-config" && row?.config_key === "DEFAULT_EXCHANGE_RATE";
+
+const handleFetchLatestRate = async () => {
+  rateSyncing.value = true;
+  try {
+    await refreshExchangeRate();
+    // 重载表格才能拿到数据库刚写入的 updated_time，保证「最后更新」列和操作列
+    // 显示的是同一个时间；失败时不重载，页面保留原值和原时间
+    await load();
+    ElMessage.success("已获取最新汇率，全局参数已更新");
+  } catch (e) {
+    // request 拦截器已统一弹错，这里只补一句业务说明，不打断页面
+    ElMessage.warning("获取失败，已保留当前汇率与修改时间");
+  } finally {
+    rateSyncing.value = false;
   }
 };
 

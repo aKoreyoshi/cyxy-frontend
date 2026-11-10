@@ -31,6 +31,18 @@
                   : "手动测算：保存只记方案，不关联任何产品"
               }}
             </span>
+            <!--
+              两个全局操作挪到本条最右侧：以前它们和「方案名称 / 保存测算」一起挤在
+              页面最底部，想重置或清空都得滚到最下面。现在进页面就能操作。
+              用一层 div 包住 + margin-left:auto 靠右，窄屏换行时两个按钮仍成组，
+              不会和上面的搜索下拉、状态说明挤散。按钮的点击事件与类型保持原样。
+            -->
+            <div class="product-bar__actions">
+              <el-button type="primary" @click="handleReset"
+                >重置为示例数据</el-button
+              >
+              <el-button @click="handleClear">清空重算</el-button>
+            </div>
           </div>
         </el-card>
       </el-col>
@@ -249,10 +261,7 @@
             <el-row :gutter="12">
               <el-col :xs="24" :sm="12" :md="12">
                 <el-form-item label="配送方式">
-                  <el-select
-                    v-model="form.shippingMethod"
-                    class="full"
-                  >
+                  <el-select v-model="form.shippingMethod" class="full">
                     <el-option
                       v-for="item in SHIPPING_METHOD_OPTIONS"
                       :key="item.code"
@@ -296,7 +305,7 @@
                   />
                 </el-form-item>
               </el-col>
-              <!-- 亚马逊 SEND：整票核算，显示只读的头程总费用 + 商品总数；
+              <!-- 亚马逊 SEND：显示当前产品的配送费($) + 当前产品件数（关联产品时只读）；
                    自选承运人：显示运费单价（头程方式可自动带出，可手改） -->
               <el-col :xs="24" :sm="12" :md="12" v-if="!amazonSend">
                 <el-form-item label="运费单价">
@@ -311,7 +320,7 @@
               </el-col>
               <template v-else>
                 <el-col :xs="24" :sm="12" :md="12">
-                  <el-form-item label="头程总费用 (整票)">
+                  <el-form-item label="头程总费用 (当前产品)">
                     <el-input
                       v-model.number="form.shippingTotalFeeUsd"
                       type="number"
@@ -324,13 +333,13 @@
                       {{
                         sendFeeLocked
                           ? "从产品档案只读带入，要改请先到产品详情编辑"
-                          : "未关联产品，可手动填写整票配送费"
+                          : "未关联产品，可手动填写当前产品的配送费"
                       }}
                     </div>
                   </el-form-item>
                 </el-col>
                 <el-col :xs="24" :sm="12" :md="12">
-                  <el-form-item label="商品总数 (整票)">
+                  <el-form-item label="商品总数量 (当前产品)">
                     <el-input
                       v-model.number="form.totalUnits"
                       type="number"
@@ -352,7 +361,7 @@
                   }}</span>
                   <span class="calc-hint">{{
                     amazonSend
-                      ? "头程总费用 × 汇率 ÷ 商品总数"
+                      ? "当前产品配送费 × 汇率 ÷ 当前产品件数"
                       : "MAX(实重, 抛货体积重) × 运费单价"
                   }}</span>
                 </div>
@@ -522,13 +531,17 @@
               </el-col>
               <el-col :span="12">
                 <el-form-item label="尾程退货费">
+                  <!-- 自动带出只负责「填值」，框保持可编辑：不加 disabled、不加 readonly。
+                       用户输入会打上 manual 标记，之后只要计费重/尺寸档不变就不会被带出值冲掉 -->
                   <el-input
                     v-model.number="form.returnFeeUsd"
                     type="number"
                     min="0"
+                    @input="markReturnFeeManual"
                   >
                     <template #append>$</template>
                   </el-input>
+                  <div class="calc-hint">{{ returnFeeHint }}</div>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -601,12 +614,25 @@
             <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="汇率 (USD → CNY)">
+                  <!-- 进页面自动带出全局参数「最新汇率」，但框保持可编辑：
+                       不加 disabled / readonly，用户手改后按手改值算（需求明确要求）。 -->
                   <el-input
                     v-model.number="form.exchangeRate"
                     type="number"
                     min="0"
                     step="0.01"
-                  />
+                    @input="markExchangeRateManual"
+                  >
+                    <template #append>
+                      <el-button
+                        :loading="exchangeRateSyncing"
+                        @click="handleRefreshExchangeRate"
+                      >
+                        获取最新汇率
+                      </el-button>
+                    </template>
+                  </el-input>
+                  <div class="calc-hint">{{ exchangeRateHint }}</div>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
@@ -745,7 +771,7 @@
       </el-col>
     </el-row>
 
-    <!-- 底部操作 -->
+    <!-- 底部只留「方案名称 + 保存测算」：重置 / 清空已移到顶部关联产品条最右侧 -->
     <el-row :gutter="16">
       <el-col :span="24" class="footer-bar">
         <el-input
@@ -757,10 +783,6 @@
         <el-button type="success" :loading="saving" @click="handleSave"
           >保存测算</el-button
         >
-        <el-button type="primary" @click="handleReset"
-          >重置为示例数据</el-button
-        >
-        <el-button @click="handleClear">清空重算</el-button>
       </el-col>
     </el-row>
   </div>
@@ -783,13 +805,136 @@ import {
   saveProfit,
   getProductOptions,
   getProductPrefill,
+  getReturnFee,
 } from "@/api/profit.js";
+// 汇率：当前生效值走全局参数「最新汇率」，趋势数据走 /api/dict/exchange-rate，两者别混用
+import {
+  getLatestExchangeRate,
+  refreshExchangeRate,
+} from "@/api/exchange-rate.js";
+// 与「全局参数」页共用同一个时间格式化，保证两处「更新于」显示格式一致
+import { formatRateTime } from "@/views/params/columns.js";
 
 const { route, getRouteParams, removeRouteParams } = useCommon();
 
 const form = ref(createDefaultForm());
 
 const result = computed(() => calculate(form.value));
+
+/* ================================================================
+   汇率：当前生效值来自 sys_config「最新汇率」，进页面读一次 + 可手动同步
+   —— 输入框不加 disabled / readonly，用户随时可手改（与尾程退货费同一套交互）
+   ================================================================ */
+const exchangeRateHint = ref("");
+const exchangeRateSyncing = ref(false);
+// 用户手改过就不再被「选产品 prefill」这类自动动作覆盖；
+// 但点「取最新」是明确要最新值的动作，允许覆盖，所以不在这里拦
+const exchangeRateManual = ref(false);
+
+/** 用户手改汇率时切换提示；程序化赋值不触发原生 input 事件，不会误标成手改 */
+const markExchangeRateManual = () => {
+  exchangeRateManual.value = true;
+  exchangeRateHint.value = "已手动修改，将按此值参与计算";
+};
+
+/** 把后端返回的当前汇率写进表单，并给出数据日期、来源与修改时间，方便对账 */
+const applyLatestExchangeRate = (vo) => {
+  if (!vo || vo.rate == null) return;
+  form.value.exchangeRate = Number(vo.rate);
+  const parts = ["当前值来自全局参数「最新汇率」"];
+  if (vo.rate_date) parts.push(`数据日期 ${vo.rate_date}`);
+  if (vo.provider) parts.push(`来源 ${vo.provider}`);
+  // 与全局参数页那一行显示的是同一个 sys_config.updated_time；
+  // 进页面读一次、点「取最新」后立刻刷新，用户能确认本次动作确实生效了
+  const updated = formatRateTime(vo.updated_time);
+  if (updated) parts.push(`更新于 ${updated}`);
+  if (vo.stale) parts.push("数据可能已过期，可点「取最新」");
+  exchangeRateHint.value = parts.join(" · ");
+};
+
+/** 进页面读一次自家接口。⚠️ 不轮询、不直连境外 API —— 境外取数由后端统一做 */
+const loadLatestExchangeRate = async () => {
+  try {
+    const vo = await getLatestExchangeRate();
+    if (!exchangeRateManual.value) applyLatestExchangeRate(vo);
+  } catch (e) {
+    // request 拦截器已统一弹错，这里只降级成一行提示，不打断测算
+    exchangeRateHint.value = "读取最新汇率失败，已沿用本地值，可手动填写";
+  }
+};
+
+/** 点「取最新」：让后端重新拉一次再回填；失败保留现值，绝不阻断测算 */
+const handleRefreshExchangeRate = async () => {
+  exchangeRateSyncing.value = true;
+  try {
+    const vo = await refreshExchangeRate();
+    applyLatestExchangeRate(vo);
+    // 用户主动要最新值，解除手改标记，让后续 prefill 也能继续带出
+    exchangeRateManual.value = false;
+    ElMessage.success("已同步最新汇率");
+  } catch (e) {
+    exchangeRateHint.value = "同步失败，已保留当前汇率，可手动填写";
+  } finally {
+    exchangeRateSyncing.value = false;
+  }
+};
+
+/* ================================================================
+   尾程退货费自动带出：只按「实际计费重」查 dict_return_processing_fee
+   —— 只填值、不锁定输入框，用户随时可手改（需求明确要求不禁用这个框）
+   尺寸分段只是可选的收窄条件，不是取值的必要前提。
+   ================================================================ */
+const returnFeeHint = ref("");
+// 请求序号：连续调整尺寸/重量时，防止先发后到的旧响应覆盖最新一次带出结果
+let returnFeeSeq = 0;
+
+/** 用户手改输入框时切换提示；程序化赋值不触发原生 input 事件，不会误标成 manual */
+const markReturnFeeManual = () => {
+  returnFeeHint.value = "已手动修改，将按此值参与计算";
+};
+
+/* 只在「计费重 / 尺寸档」变化时重新带出，三条关键约束：
+   ① watch 的 getter 必须返回字符串而不是数组 —— 数组每次都是新引用，
+      会让表单里任何一次输入都误触发查表，把手改的值冲掉；
+   ② key 里保留 sizeTierKey：同一个计费重在小号/大号档取不同费用，
+      尺寸变了要重新查；但它是「收窄」不是「前提」，见下方 tier || undefined；
+   ③ 自动带出会改 form.returnFeeUsd，但计费重与尺寸档不变，
+      key 不变 → 既不递归触发，也不会覆盖用户之后的手改值。
+   计费重本身由 calc.js 算出（实重与体积重取大），是唯一需要给的量。 */
+watch(
+  () => `${result.value.sizeTierKey}|${result.value.billWeightLb}`,
+  async () => {
+    const seq = ++returnFeeSeq;
+    const tier = result.value.sizeTierKey;
+    const lb = Number(result.value.billWeightLb);
+    // 只按计费重取值：tier 允许为空，后端会全表按重量匹配，不能因为缺尺寸档就拦住带出
+    if (!Number.isFinite(lb) || lb < 0) {
+      returnFeeHint.value = "请先填写尺寸与重量，才能按重量档自动带出";
+      return;
+    }
+    try {
+      // undefined 会被 axios 从 query 里跳过，后端 anyTier 分支纯按计费重查
+      const vo = await getReturnFee(tier || undefined, lb);
+      if (seq !== returnFeeSeq) return; // 已有更新的请求，丢弃这次结果
+      if (vo?.matched && vo.fee_usd != null) {
+        form.value.returnFeeUsd = Number(vo.fee_usd);
+        const basis = vo.fee_type === "FORMULA" ? "按续重公式算出" : "固定档";
+        // 提示里直接写命中的分组名，用户一眼能看出取的是哪一档；
+        // 计费重是唯一需要用户给的量，尺寸分段由 calc.js 自动判定、不需手选
+        returnFeeHint.value = `已按计费重 ${lb.toFixed(4)} lb 自动带出「${
+          vo.group_name
+        }」（${vo.weight_label}，${basis}），可手动修改`;
+      } else {
+        returnFeeHint.value = "未匹配到重量档，请手动填写";
+      }
+    } catch (e) {
+      // request 拦截器已统一弹错，这里只降级成一行提示，不打断测算
+      if (seq === returnFeeSeq)
+        returnFeeHint.value = "自动带出失败，可手动填写";
+    }
+  },
+  { immediate: true }
+);
 
 const unitLabel = computed(() =>
   form.value.sizeUnit === "cm" ? "cm" : "inch"
@@ -858,7 +1003,8 @@ const applyPrefill = (data) => {
     ["purchase_cost", "purchaseCost"],
     ["sale_price_usd", "salePriceUsd"],
     ["first_leg_price", "firstLegPrice"],
-    ["exchange_rate", "exchangeRate"],
+    // exchange_rate 故意不放在 numMap 里：汇率统一由「最新汇率」管理，
+    // 用户手改过就不能被选产品带出的值冲掉（见下方单独处理）
     ["volume_divisor", "volumeDivisor"],
     ["storage_fee_usd", "storageFeeUsd"],
     ["inbound_config_fee_usd", "inboundConfigFeeUsd"],
@@ -870,6 +1016,12 @@ const applyPrefill = (data) => {
     const v = data[k];
     if (v !== null && v !== undefined && v !== "") f[fk] = Number(v);
   });
+
+  // 汇率单独处理：后端 prefill 带出的同样是全局参数「最新汇率」，
+  // 但只有用户没手改过时才覆盖，避免突然抹掉用户刚填的结算汇率
+  if (!exchangeRateManual.value && data.exchange_rate != null) {
+    f.exchangeRate = Number(data.exchange_rate);
+  }
 };
 
 /** 保存测算：事务写方案 + 结果快照；选中产品时后端同步 upsert 该产品的 FBA 费用 */
@@ -953,6 +1105,9 @@ const tryEntryProduct = async () => {
 
 onMounted(async () => {
   searchProducts("");
+  // 先读当前汇率，再走「从列表页带产品进来」的 prefill；
+  // prefill 后端返回的汇率也来自同一个全局参数，两者不会打架
+  await loadLatestExchangeRate();
   await tryEntryProduct();
 });
 
@@ -992,9 +1147,11 @@ const currentShippingMethod = computed(
 const currentFirstLegMethod = computed(
   () => firstLegMethodMap[form.value.firstLegMethodCode] || null
 );
-// 关联产品时，SEND 的整票费用/件数从产品档案只读带入，不允许手改；
+// 关联产品时，SEND 的「当前产品费用/件数」从产品档案只读带入，不允许手改；
 // 纯手动测算（未关联产品）没有数据来源，放开手填，否则算法不可用
-const sendFeeLocked = computed(() => amazonSend.value && !!selectedProductId.value);
+const sendFeeLocked = computed(
+  () => amazonSend.value && !!selectedProductId.value
+);
 
 // 头程方式切换：带出材积比与默认单价（与录入表单 handleMethodChange 同逻辑）
 const handleFirstLegMethodChange = (code) => {
@@ -1116,7 +1273,7 @@ const detailRows = computed(() => {
       value: money(r.firstLegCostCny),
       desc:
         form.value.shippingMethod === "AMAZON_SEND"
-          ? "亚马逊SEND：整票配送费 × 汇率 ÷ 商品总数"
+          ? "亚马逊SEND：当前产品配送费 × 汇率 ÷ 当前产品件数"
           : "自选承运人：MAX(实重, 抛重) × 运费单价",
     },
     {
@@ -1145,6 +1302,9 @@ const detailRows = computed(() => {
 /* ---------- 操作 ---------- */
 const handleReset = () => {
   form.value = createDefaultForm();
+  // 示例数据的汇率是前端常量 6.68（只在接口挂了时兜底），重置后要重新对齐最新汇率
+  exchangeRateManual.value = false;
+  loadLatestExchangeRate();
   ElMessage.success("已重置为示例数据");
 };
 
@@ -1178,6 +1338,9 @@ const handleClear = () => {
     targetMargin: form.value.targetMargin,
     useMinCommission: false,
   };
+  // 清空重算也回到「当前生效汇率」；手改标记随之清掉
+  exchangeRateManual.value = false;
+  loadLatestExchangeRate();
 };
 </script>
 
@@ -1420,6 +1583,16 @@ const handleClear = () => {
   .product-bar__mode {
     font-size: 12px;
     color: var(--el-text-color-secondary);
+  }
+
+  /* 顶部关联产品条最右侧的操作组：margin-left:auto 把整组推到 flex 行末；
+     flex-shrink:0 防止按钮被长状态文字挤变形，窄屏换行时两个按钮仍挨在一起 */
+  .product-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 }
 </style>

@@ -27,6 +27,26 @@ const num = (v, digits = 2) =>
       maximumFractionDigits: digits,
     });
 
+/**
+ * 时间格式化，导出给「全局参数」页和「利润测算」页共用，保证三处显示的
+ * 修改时间格式完全一致。
+ *
+ * ⚠️ 后端 LocalDateTime 经 Jackson 序列化后，可能是 ISO 字符串
+ * "2026-11-10T23:58:34.123"（Spring Boot 默认），也可能在日期时间戳开关开启时
+ * 变成数组 [2026,11,10,23,58,34]。两种都要吃掉，否则用户会看到带 T 的怪格式。
+ * 空值返回 null —— RhTable 会显示灰色 "--"，比空字符串更容易看出「没数据」。
+ */
+export const formatRateTime = v => {
+  if (isBlank(v)) return null;
+  if (Array.isArray(v)) {
+    const [y, m, d, hh = 0, mm = 0, ss = 0] = v;
+    const p2 = n => String(n).padStart(2, "0");
+    return `${y}-${p2(m)}-${p2(d)} ${p2(hh)}:${p2(mm)}:${p2(ss)}`;
+  }
+  // "2026-11-10T23:58:34.123" → "2026-11-10 23:58:34"，截掉毫秒不影响可读性
+  return String(v).replace("T", " ").slice(0, 19);
+};
+
 /** 枚举值大小写可能不一致：统一大写查表，查不到原样返回，绝不吞值 */
 const label = map => v =>
   isBlank(v) ? null : map[String(v).toUpperCase()] || v;
@@ -154,7 +174,13 @@ const RAW_DICT_COLUMNS = {
     { label: "参数值", prop: "config_value", width: 110 },
     { label: "值类型", prop: "value_type", width: 90, format: label(VALUE_TYPE) },
     { label: "说明", prop: "remark", width: 320 },
-    { label: "最后更新", prop: "updated_at", width: 190 },
+    // ⚠️ 后端实体字段是 updatedTime，全局 SNAKE_CASE 序列化成 updated_time。
+    // 之前写成 updated_at 取不到值，这一列一直是 "--"，正好借「显示修改时间」一并修正。
+    { label: "最后更新", prop: "updated_time", width: 190, format: formatRateTime },
+    // operate 是 RhTable 约定的操作列（prop === 'operate' 时不渲染默认文本，交给具名插槽）。
+    // ⚠️ 只加在 sys-config 这一组：其他 5 个参数页共用同一个表格组件，但列配置各自独立，
+    //    不会多出这一列。用户明确「其他参数页的编辑功能后期再开放」，这轮只做汇率这一行。
+    { label: "操作", prop: "operate", width: 190 },
   ],
 };
 
@@ -189,7 +215,7 @@ export const DICT_META = {
   "exchange-rate": {
     title: "汇率变化",
     source: "dict_exchange_rate",
-    note: "按业务日期记录 USD/CNY 汇率，一天一条；表格与趋势图共用同一份数据。",
+    note: "本页表格与趋势图记录 USD/CNY 汇率变化，按业务日期一天一条；右上角「最新汇率」是全局参数里的当前生效值，也是利润测算读取的唯一入口。可点「同步最新汇率」触发后端重新拉取。",
   },
   "size-tier": {
     title: "尺寸标准",
@@ -214,7 +240,12 @@ export const DICT_META = {
   "sys-config": {
     title: "全局参数",
     source: "sys_config",
-    note: "利润测算里散落的常量：燃油附加、体积重除数、价格带分界、默认广告占比等，统一在此维护。",
+    note: "利润测算里散落的常量：燃油附加、体积重除数、价格带分界、默认广告占比等，统一在此维护。「最新汇率」行可点「获取最新汇率」由后端取最新值并更新，旁边显示修改时间；其余编辑功能后续版本开放。",
+  },
+  "return-fee": {
+    title: "尾程退货费",
+    source: "dict_return_processing_fee",
+    note: "只按实际计费重自动带出利润测算里的「尾程退货费」；七个分组按原表行段划分，尺寸档仅作可选收窄，大件段纯按重量区间取。公式档按起步价加续重计算，带出的值仍可手动修改。",
   },
 };
 

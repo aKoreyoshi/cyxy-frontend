@@ -8,6 +8,15 @@
       <div class="params-head__side">
         <span class="params-count">共 <strong>{{ rows.length }}</strong> 条记录</span>
         <el-button size="small" :loading="loading" @click="load">刷新</el-button>
+        <!-- 同步按钮调后端重新拉外部汇率；后端失败会保留上一次值，页面不会白屏 -->
+        <el-button
+          size="small"
+          type="primary"
+          :loading="syncing"
+          @click="handleSync"
+        >
+          同步最新汇率
+        </el-button>
         <el-button size="small" disabled>编辑</el-button>
         <span class="params-edit-hint">编辑功能后续版本开放</span>
       </div>
@@ -37,9 +46,23 @@
         </div>
 
         <div class="params-summary">
+          <!-- 当前值读 sys_config「最新汇率」，不是从趋势表最后一行取：
+               本页表格与折线图只记录历史，业务读取的唯一入口是全局参数 -->
           <div class="params-summary__item">
             <span class="params-summary__label">最新汇率</span>
-            <span class="params-summary__lead">{{ fixed(latest?.rate, 4) }}</span>
+            <span class="params-summary__lead">{{ fixed(currentRate, 4) }}</span>
+          </div>
+          <div class="params-summary__item">
+            <span class="params-summary__label">当前值日期</span>
+            <span class="params-summary__value">
+              {{ currentRateDate || "--"
+              }}{{ currentRateStale ? "（可能过期）" : "" }}
+            </span>
+          </div>
+          <!-- 全局参数「最新汇率」这一行的修改时间：与全局参数页、利润测算页同源同格式 -->
+          <div class="params-summary__item">
+            <span class="params-summary__label">修改时间</span>
+            <span class="params-summary__value">{{ currentRateUpdated || "--" }}</span>
           </div>
           <div class="params-summary__item">
             <span class="params-summary__label">期间最高</span>
@@ -90,10 +113,21 @@
 
 <script setup>
 import { computed, ref, onMounted } from "vue";
+import { ElMessage } from "element-plus";
 import RhChart from "@/components/RhChart/index.vue";
 import { useLayout } from "@/hooks/useLayout.js";
+// 趋势数据（时序表）与当前值（全局参数）是两组不同接口，别混用
 import { getExchangeRates } from "@/api/dict.js";
-import { DICT_COLUMNS, DICT_META, formatRows } from "../columns.js";
+import {
+  getLatestExchangeRate,
+  refreshExchangeRate,
+} from "@/api/exchange-rate.js";
+import {
+  DICT_COLUMNS,
+  DICT_META,
+  formatRows,
+  formatRateTime,
+} from "../columns.js";
 import "../params.css";
 
 const { isDark } = useLayout();
@@ -105,6 +139,14 @@ const rows = ref([]);
 const loading = ref(false);
 const error = ref("");
 const lastLoadedAt = ref("");
+
+// 「当前生效汇率」单独存：它来自全局参数，趋势表 rows 只负责最高/最低/曲线
+const currentRate = ref(null);
+const currentRateDate = ref("");
+const currentRateStale = ref(false);
+// 全局参数「最新汇率」的修改时间；与全局参数页那一列、利润测算页提示同源
+const currentRateUpdated = ref("");
+const syncing = ref(false);
 
 const latest = computed(() =>
   rows.value.length ? rows.value[rows.value.length - 1] : null
@@ -189,6 +231,23 @@ const chartOption = computed(() => {
   };
 });
 
+/**
+ * 读当前生效汇率。单独一个函数、单独 try-catch：
+ * 这个接口失败只影响右上角摘要卡，趋势图和记录表格照样能看，不该整页报错。
+ * 读失败时也不清空已有值，宁可显示上一次的，也不要把卡片打成 "--"。
+ */
+const loadCurrentRate = async () => {
+  try {
+    const vo = await getLatestExchangeRate();
+    currentRate.value = vo?.rate ?? null;
+    currentRateDate.value = vo?.rate_date || "";
+    currentRateStale.value = !!vo?.stale;
+    currentRateUpdated.value = formatRateTime(vo?.updated_time) || "";
+  } catch (e) {
+    /* request 拦截器已统一弹错，这里静默降级即可 */
+  }
+};
+
 const load = async () => {
   loading.value = true;
   error.value = "";
@@ -205,6 +264,24 @@ const load = async () => {
     rows.value = [];
   } finally {
     loading.value = false;
+  }
+  await loadCurrentRate();
+};
+
+/**
+ * 点「同步最新汇率」：让后端重新拉外部接口（主源→备源→失败保留旧值），
+ * 成功后重新加载趋势与当前值。失败时只补一句提示，页面数据原样保留。
+ */
+const handleSync = async () => {
+  syncing.value = true;
+  try {
+    await refreshExchangeRate();
+    ElMessage.success("已同步最新汇率");
+    await load();
+  } catch (e) {
+    ElMessage.warning("同步失败，已保留上一次的汇率");
+  } finally {
+    syncing.value = false;
   }
 };
 

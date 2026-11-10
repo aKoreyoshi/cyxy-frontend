@@ -60,12 +60,16 @@ const createDefaultForm = () => ({
   height_cm: null,
   size_tier_code: null, // 由长/宽/高 + 含包装实重自动匹配，不手工填
   first_leg_method_code: "",
-  // 配送方式：默认自选承运人（历史上只有这一种模式）；选亚马逊SEND时改填配送总费用
+  // 配送方式：默认自选承运人（历史上只有这一种模式）。
+  // ⚠️ 系统里有两个「配送总费用」，按配送方式二选一，别互相换算：
+  //    亚马逊SEND → shipping_total_fee_usd（$）；自己选择承运人 → shipping_total_fee_cny（￥）。
+  //    两者币种与来源都不同，表单按配送方式条件显示，同一时刻只会看到其中一个。
   shipping_method: "SELF_CARRIER",
   logistics_provider: "",
   first_leg_unit_price: null,
-  shipping_total_fee_usd: null, // 仅亚马逊SEND模式使用
-  total_units: null,
+  shipping_total_fee_usd: null, // 仅亚马逊SEND：当前产品的配送费（$），不是整票费用
+  total_units: null, // 当前产品的总数量（件），不记单票货件总数
+  shipping_total_fee_cny: null, // 仅自己选择承运人：当前产品的配送费（￥），与头程单价同组
   // 预计送达时间：填了就是「配送中」；实际送达时间与状态由「确认送达」写入，前端不传
   expected_delivery_date: null,
   tariff_fee: null,
